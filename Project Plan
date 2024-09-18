@@ -1,0 +1,22 @@
+Setup:
+  How do we want to handle collaboration? 
+    Dev on main vs. dev on separate branches with merge to main
+      ->
+    variable naming convention
+      ->
+
+Tasks:
+  [x] Create + share repo
+  [] Meet + create project plan
+  [] Write function to query API
+  [] Write function to call query function for multiple years
+  [] Update function to create new census class for tibble
+  [] Write summary function for census class
+  [] Write plot function for census class
+  [] Write narrative for each task above
+  [] Investigate data using functions (with narrative)
+  [] Clean up + comment code (review Good Programming Practices)
+  [] Review end product
+  [] Turn in
+
+Timeline:
