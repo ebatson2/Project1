@@ -10,6 +10,14 @@ Tasks:
   [x] Meet + create project plan (Fri 9/20) - EB/DK
 
   [] Write function to query API (Mon 9/23)
+        {} Year of survey (2022 as default). Only a single value here
+        {} Specify the numeric variables to be returned (AGEP and PWGTP as default). PWGTP should
+            always be returned.
+        {} Specify the categorical variables to be returned (SEX as default)
+        {} Specify the geography level: All, Region, Division, or State (with the default of All)
+        {} An optional argument to subset the data (this subsetting should be on the API call itself, not on
+           what is returned - see the examples in the links above)
+
   [] Write function to call query function for multiple years (Wed 9/25)
   [] Update function to create new census class for tibble (Wed 9/25)
   [] Write summary function for census class (Fri 9/27)
