@@ -1,22 +1,21 @@
 Setup:
   How do we want to handle collaboration? 
     Dev on main vs. dev on separate branches with merge to main
-      ->
+      -> Dev on main
     variable naming convention
-      ->
+      -> underscore
 
 Tasks:
-  [x] Create + share repo
-  [] Meet + create project plan
-  [] Write function to query API
-  [] Write function to call query function for multiple years
-  [] Update function to create new census class for tibble
-  [] Write summary function for census class
-  [] Write plot function for census class
-  [] Write narrative for each task above
-  [] Investigate data using functions (with narrative)
-  [] Clean up + comment code (review Good Programming Practices)
-  [] Review end product
-  [] Turn in
+  [x] Create + share repo - EB
+  [x] Meet + create project plan (Fri 9/20) - EB/DK
 
-Timeline:
+  [] Write function to query API (Mon 9/23)
+  [] Write function to call query function for multiple years (Wed 9/25)
+  [] Update function to create new census class for tibble (Wed 9/25)
+  [] Write summary function for census class (Fri 9/27)
+  [] Write plot function for census class (Fri 9/27)
+  [] Write narrative for each task above (Mon 9/30)
+  [] Investigate data using functions (with narrative) (Mon 9/30)
+  [] Clean up + comment code (review Good Programming Practices) (Tues 10/1)
+  [] Review end product (Tues 10/1)
+  [] Turn in (Wed 10/2)
