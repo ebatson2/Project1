@@ -1,0 +1,135 @@
+---
+title: "Project1"
+format: html
+editor: visual
+API key: ef57316550be8b6492df7ca01b32a193c83ed8fc
+---
+
+```{r}
+# Load libraries
+library(jsonlite)
+library(tidyverse)
+```
+
+Starting out, just a basic query following the Census examples and class notes
+
+```{r}
+key <- "ef57316550be8b6492df7ca01b32a193c83ed8fc"
+URL_census <- "https://api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&SCHL=24&key=ef57316550be8b6492df7ca01b32a193c83ed8fc"
+census_info <- httr::GET(URL_census)
+```
+
+
+```{r}
+parsed <- fromJSON(rawToChar(census_info$content))
+
+num_columns <- length(parsed[1,])
+
+parsed[1,]
+
+parsed[2:10,]
+
+str(parsed)
+
+census_data <- data.frame(parsed[-1,])
+names(census_data) <- parsed[1,]
+
+census_data = as_tibble(census_data)
+
+census_data
+
+```
+
+
+
+Breaking down the URL into its different components:
+
+#host name
+https://api.census.gov/data/
+
+#data year
+2022/
+
+#dataset name acronym
+acs/acs1/pums
+
+#variables that we want to look at
+?get=SEX,PWGTP,MAR&SCHL=24
+
+#Your API Key
+&key=ef57316550be8b6492df7ca01b32a193c83ed8fc"
+
+write a helper function to take what is returned by GET() and turn it into a nice tibble:
+
+```{r}
+get_tibble <- function(data_info){
+  
+  parsed <- fromJSON(rawToChar(data_info$content))
+
+  num_columns <- length(parsed[1,])
+  
+  census_data <- data.frame(parsed[-1,])
+  names(census_data) <- parsed[1,]
+
+  return(as_tibble(census_data))
+}
+```
+
+```{r}
+census_tibble <- get_tibble(census_info)
+census_tibble
+```
+
+```{r}
+
+all_numer_vars = c("AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP", "PWGTP")
+  
+query_census_api <- function(year=2022, numer_vars=c("AGEP"), cat_vars=c("SEX"), geog="All", sub_list=list()){
+  
+  #year validation
+  if ((!year %in% 2010:2022)){
+    stop("Year must be between 2010 and 2022.")
+  }
+  
+  #numerical variable validation
+  numer_vars <- union(numer_vars, "PWGTP")
+  
+  if(length(numer_vars) < 2) {
+    stop("Not enough numerical variables specified.")
+  } else if(length(union(all_numer_vars, numer_vars)) > length(all_numer_vars)){
+    stop("numer_vars includes variables which are not in the allowed set (AGEP, GASP, GRPIP, JWAP, JWDP, JWMNP, PWGTP)")
+  }
+  
+  #put all of the selections into URL
+  key <- "ef57316550be8b6492df7ca01b32a193c83ed8fc"
+  vars <- paste0(c(numer_vars, cat_vars, "PWGTP"), collapse=",")
+  URL_census <- paste0("https://api.census.gov/data/", 
+                      year, 
+                      "/acs/acs1/pums?",
+                      "get=", vars,
+                      "&SCHL=24", 
+                      "&key=", key)
+  
+  print(URL_census)
+  
+  data_info <- httr::GET(URL_census)
+  
+  return(data_info)
+}
+
+#data_info_test <- query_census_api(year=2021, numer_vars=c("AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP"))
+data_info_test <- query_census_api(year=2021, numer_vars=c("AGEP"))
+
+data_info_test
+
+#data_tibble_test = get_tibble(data_info_test)
+#data_tibble_test
+```
+
+
+
+
+
+
+
+
