@@ -6,6 +6,8 @@ API key: ef57316550be8b6492df7ca01b32a193c83ed8fc
 ---
 
 ```{r}
+#| message=FALSE
+
 # Load libraries
 library(jsonlite)
 library(tidyverse)
@@ -15,29 +17,8 @@ Starting out, just a basic query following the Census examples and class notes
 
 ```{r}
 key <- "ef57316550be8b6492df7ca01b32a193c83ed8fc"
-URL_census <- "https://api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&SCHL=24&key=ef57316550be8b6492df7ca01b32a193c83ed8fc"
-census_info <- httr::GET(URL_census)
-```
-
-
-```{r}
-parsed <- fromJSON(rawToChar(census_info$content))
-
-num_columns <- length(parsed[1,])
-
-parsed[1,]
-
-parsed[2:10,]
-
-str(parsed)
-
-census_data <- data.frame(parsed[-1,])
-names(census_data) <- parsed[1,]
-
-census_data = as_tibble(census_data)
-
-census_data
-
+example_URL_census <- "https://api.census.gov/data/2022/acs/acs1/pums?get=SEX,PWGTP,MAR&SCHL=24&key=ef57316550be8b6492df7ca01b32a193c83ed8fc"
+census_info <- httr::GET(example_URL_census)
 ```
 
 write a helper function to take what is returned by GET() and turn it into a nice tibble:
@@ -56,23 +37,44 @@ get_tibble <- function(data_info){
 }
 ```
 
+test this function with the example URL data:
+
 ```{r}
 census_tibble <- get_tibble(census_info)
 census_tibble
 ```
 
+Store the strings needed for input validation:
+
 ```{r}
 #constants needed in the code chunk below
 all_numer_vars = c("AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP", "PWGTP")
-all_cat_vars = c("FER", "HHL", "HISPEED", "JWAP", "JWDP", "JWTRNS", "SCH", "SCHL", "SEX")
+time_vars = c("JWAP", "JWDP")
+all_cat_vars = c("FER", "HHL", "HISPEED", "JWTRNS", "SCH", "SCHL", "SEX")
 all_geog = c("All", "Region", "Division", "State")
 key_query <- "&key=ef57316550be8b6492df7ca01b32a193c83ed8fc"
+```
+
+Write function to make numerical variable columns numeric, time column datetime, categorical columns levels:
+
+```{r}
+format_num_and_cat_vars <- function(data_tibble, numer_vars, cat_vars){
+  for (var in numer_vars){
+    if(var == 'JWAP'){
+#      data_tibble <- data_tibble |>
+#                      rename('temp' = 'JWAP') |>
+#                      mutate('JWAP' = as_datetime('temp'))
+    }
+  }
+  
+  return(data_tibble)
+}
 ```
 
 Customizable function to query the API:
 
 ```{r}
-query_census_api <- function(year=2022, numer_vars=c("AGEP"), cat_vars=c("SEX"), geog="All", geog_values=c()){
+query_census_api <- function(year=2022, numer_vars=c("AGEP"), cat_vars=c("SEX"), geog="State", geog_values=c('12')){
   
   ######################INPUT VALIDATION######################
   #year
@@ -91,9 +93,9 @@ query_census_api <- function(year=2022, numer_vars=c("AGEP"), cat_vars=c("SEX"),
   
   #cat_vars
   if(length(cat_vars) < 1) {
-    stop("Not enough categorical variables specified. Options are FER, HHL, HISPEED, JWAP, JWDP, JWTRNS, SCH, SCHL, and SEX")
+    stop("Not enough categorical variables specified. Options are FER, HHL, HISPEED, JWTRNS, SCH, SCHL, and SEX")
   } else if(length(union(all_cat_vars, cat_vars)) > length(all_cat_vars)){
-    stop("cat_vars includes variables which are not in the allowed set, which is FER, HHL, HISPEED, JWAP, JWDP, JWTRNS, SCH, SCHL, and SEX")
+    stop("cat_vars includes variables which are not in the allowed set, which is FER, HHL, HISPEED, JWTRNS, SCH, SCHL, and SEX")
   }
   
   #geog
@@ -115,7 +117,6 @@ query_census_api <- function(year=2022, numer_vars=c("AGEP"), cat_vars=c("SEX"),
     }
   } 
   
-  
   URL_census <- paste0("https://api.census.gov/data/", 
                       year, 
                       "/acs/acs1/pums?",
@@ -125,21 +126,18 @@ query_census_api <- function(year=2022, numer_vars=c("AGEP"), cat_vars=c("SEX"),
                       "&SCHL=24",
                       key_query)
   
-  print(URL_census)
-  
   data_info <- httr::GET(URL_census)
+  data = get_tibble(data_info)
+  clean_data = format_num_and_cat_vars(data, numer_vars, cat_vars)
   
-  return(data_info)
+  #return(data)
 }
 
-#data_info_test <- query_census_api(year=2021, numer_vars=c("AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP", "PWGTP"))
-#data_info_test <- query_census_api(year=2021, numer_vars=c("AGEP"), cat_vars=c("HISPEED"), geog="State", geog_values=c("06", "24"))
-data_info_test <- query_census_api(year=2021, numer_vars=c("AGEP"), cat_vars=c("HISPEED"), geog="State")
-#data_info_test <- query_census_api(year=2021, numer_vars=c("AGEP"), cat_vars=c("HISPEED"))
+#data_tibble_test <- query_census_api(year=2021, numer_vars=c("AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP", "PWGTP"))
+#data_tibble_test <- query_census_api(year=2021, numer_vars=c("AGEP"), cat_vars=c("HISPEED"), geog="State", geog_values=c("06", "24"))
+data_tibble_test <- query_census_api(year=2021, numer_vars=c("AGEP"), cat_vars=c("HISPEED"), geog="State")
+#data_tibble_test <- query_census_api(year=2021, numer_vars=c("AGEP"), cat_vars=c("HISPEED"))
 
-data_info_test
-
-data_tibble_test = get_tibble(data_info_test)
 data_tibble_test
 ```
 
@@ -147,10 +145,22 @@ Function to call the query function:
 
 ```{r}
 query_with_years <- function(years=c(2022), ...){
-  return(query_census_api(years[1], ...))
+  
+  combined_tibble = tibble()
+  
+  for(i in seq_along(years)){
+    year_tibble <- query_census_api(year=years[i], ...) |>
+                      mutate(year=years[i])
+    
+    combined_tibble <- bind_rows(combined_tibble, year_tibble)
+  }
+  
+  return(combined_tibble)
 }
 
-query_with_years()
+data_tibble <- query_with_years(numer_vars=c("JWAP"))
+
+data_tibble
 ```
 
 
