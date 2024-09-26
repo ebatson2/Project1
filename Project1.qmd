@@ -40,25 +40,6 @@ census_data
 
 ```
 
-
-
-Breaking down the URL into its different components:
-
-#host name
-https://api.census.gov/data/
-
-#data year
-2022/
-
-#dataset name acronym
-acs/acs1/pums
-
-#variables that we want to look at
-?get=SEX,PWGTP,MAR&SCHL=24
-
-#Your API Key
-&key=ef57316550be8b6492df7ca01b32a193c83ed8fc"
-
 write a helper function to take what is returned by GET() and turn it into a nice tibble:
 
 ```{r}
@@ -81,34 +62,68 @@ census_tibble
 ```
 
 ```{r}
-
+#constants needed in the code chunk below
 all_numer_vars = c("AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP", "PWGTP")
+all_cat_vars = c("FER", "HHL", "HISPEED", "JWAP", "JWDP", "JWTRNS", "SCH", "SCHL", "SEX")
+all_geog = c("All", "Region", "Division", "State")
+key_query <- "&key=ef57316550be8b6492df7ca01b32a193c83ed8fc"
+```
+
+Customizable function to query the API:
+
+```{r}
+query_census_api <- function(year=2022, numer_vars=c("AGEP"), cat_vars=c("SEX"), geog="All", geog_values=c()){
   
-query_census_api <- function(year=2022, numer_vars=c("AGEP"), cat_vars=c("SEX"), geog="All", sub_list=list()){
-  
-  #year validation
+  ######################INPUT VALIDATION######################
+  #year
   if ((!year %in% 2010:2022)){
     stop("Year must be between 2010 and 2022.")
   }
   
-  #numerical variable validation
+  #numer_vars
   numer_vars <- union(numer_vars, "PWGTP")
   
   if(length(numer_vars) < 2) {
-    stop("Not enough numerical variables specified.")
+    stop("Not enough numerical variables specified. Options are AGEP, GASP, GRPIP, JWAP, JWDP, JWMNP, and PWGTP")
   } else if(length(union(all_numer_vars, numer_vars)) > length(all_numer_vars)){
-    stop("numer_vars includes variables which are not in the allowed set (AGEP, GASP, GRPIP, JWAP, JWDP, JWMNP, PWGTP)")
+    stop("numer_vars includes variables which are not in the allowed set, which is AGEP, GASP, GRPIP, JWAP, JWDP, JWMNP, and PWGTP")
   }
   
-  #put all of the selections into URL
-  key <- "ef57316550be8b6492df7ca01b32a193c83ed8fc"
-  vars <- paste0(c(numer_vars, cat_vars, "PWGTP"), collapse=",")
+  #cat_vars
+  if(length(cat_vars) < 1) {
+    stop("Not enough categorical variables specified. Options are FER, HHL, HISPEED, JWAP, JWDP, JWTRNS, SCH, SCHL, and SEX")
+  } else if(length(union(all_cat_vars, cat_vars)) > length(all_cat_vars)){
+    stop("cat_vars includes variables which are not in the allowed set, which is FER, HHL, HISPEED, JWAP, JWDP, JWTRNS, SCH, SCHL, and SEX")
+  }
+  
+  #geog
+  if (!(geog %in% all_geog)){
+    stop("invalid value for geog. Options are All, Region, Division, and State")
+  }
+  ######################INPUT VALIDATION######################
+
+  #now to build the query URL
+  vars_query <- paste0(c(numer_vars, cat_vars), collapse=",")
+  
+  geog_query <- character()
+  
+  if(geog != "All"){
+    if (length(geog_values) == 0) {
+      geog_query <- paste0("&for=", tolower(geog), ":*")
+    } else {
+      geog_query <- paste0("&for=", tolower(geog), ":", paste0(geog_values, collapse=","))
+    }
+  } 
+  
+  
   URL_census <- paste0("https://api.census.gov/data/", 
                       year, 
                       "/acs/acs1/pums?",
-                      "get=", vars,
-                      "&SCHL=24", 
-                      "&key=", key)
+                      "get=",
+                      vars_query,
+                      geog_query,
+                      "&SCHL=24",
+                      key_query)
   
   print(URL_census)
   
@@ -117,15 +132,26 @@ query_census_api <- function(year=2022, numer_vars=c("AGEP"), cat_vars=c("SEX"),
   return(data_info)
 }
 
-#data_info_test <- query_census_api(year=2021, numer_vars=c("AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP"))
-data_info_test <- query_census_api(year=2021, numer_vars=c("AGEP"))
+#data_info_test <- query_census_api(year=2021, numer_vars=c("AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP", "PWGTP"))
+#data_info_test <- query_census_api(year=2021, numer_vars=c("AGEP"), cat_vars=c("HISPEED"), geog="State", geog_values=c("06", "24"))
+data_info_test <- query_census_api(year=2021, numer_vars=c("AGEP"), cat_vars=c("HISPEED"), geog="State")
+#data_info_test <- query_census_api(year=2021, numer_vars=c("AGEP"), cat_vars=c("HISPEED"))
 
 data_info_test
 
-#data_tibble_test = get_tibble(data_info_test)
-#data_tibble_test
+data_tibble_test = get_tibble(data_info_test)
+data_tibble_test
 ```
 
+Function to call the query function:
+
+```{r}
+query_with_years <- function(years=c(2022), ...){
+  return(query_census_api(years[1], ...))
+}
+
+query_with_years()
+```
 
 
 
