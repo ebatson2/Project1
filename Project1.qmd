@@ -13,7 +13,13 @@ library(jsonlite)
 library(tidyverse)
 ```
 
-Starting out, just a basic query following the Census examples and class notes
+# Introduction
+
+Our goal for this project is to write functions that will manipulate and process data sets that come from the Public Use Microdata Sample (PUMS) Census API. This API gives pseudo person-level data. We'll create generic functions to automatically summarize and plot certain returned data.
+
+# Basic Example
+
+To start off and gain familiarity with using the Census API, we did a basic query following the [Census examples](https://api.census.gov/data/2022/acs/acs1/pums/examples.html) and class notes. We saved the query as an R object named `census_info`. This helped us by allowing us to see how using R to grab data by API works and test our helper functions.
 
 ```{r}
 key <- "ef57316550be8b6492df7ca01b32a193c83ed8fc"
@@ -21,7 +27,9 @@ example_URL_census <- "https://api.census.gov/data/2022/acs/acs1/pums?get=SEX,PW
 census_info <- httr::GET(example_URL_census)
 ```
 
-write a helper function to take what is returned by GET() and turn it into a nice tibble:
+# Data Processing
+
+To be able to write a customizable function to query the Census API, we wrote a couple helper functions one named `get_tibble` to take what is returned by GET() and turn it into a tibble and tested it with our `census_info` R object that we created earlier and saved the tibble as an R object named `census_tibble`. The second helper function named `format_num_and_cat_vars` to make numeric variable columns numeric, time column datetime, and categorical columns levels.
 
 ```{r}
 get_tibble <- function(data_info){
@@ -35,27 +43,11 @@ get_tibble <- function(data_info){
 
   return(as_tibble(census_data))
 }
-```
 
-test this function with the example URL data:
-
-```{r}
+#Testing our function
 census_tibble <- get_tibble(census_info)
 census_tibble
 ```
-
-Store the strings needed for input validation:
-
-```{r}
-#constants needed in the code chunk below
-all_numer_vars = c("AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP", "PWGTP")
-time_vars = c("JWAP", "JWDP")
-all_cat_vars = c("FER", "HHL", "HISPEED", "JWTRNS", "SCH", "SCHL", "SEX")
-all_geog = c("All", "Region", "Division", "State")
-key_query <- "&key=ef57316550be8b6492df7ca01b32a193c83ed8fc"
-```
-
-Write function to make numerical variable columns numeric, time column datetime, categorical columns levels:
 
 ```{r}
 format_num_and_cat_vars <- function(data_tibble, numer_vars, cat_vars){
@@ -71,7 +63,28 @@ format_num_and_cat_vars <- function(data_tibble, numer_vars, cat_vars){
 }
 ```
 
-Customizable function to query the API:
+We created five vectors named `all_numer_vars`, `time_vars`, `all_cat_vars`, `all_geog`, `key_query` that had our variables that we would need for our future function for input validation.
+
+```{r}
+#constants needed in the code chunk below
+all_numer_vars = c("AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP", "PWGTP")
+time_vars = c("JWAP", "JWDP")
+all_cat_vars = c("FER", "HHL", "HISPEED", "JWTRNS", "SCH", "SCHL", "SEX")
+all_geog = c("All", "Region", "Division", "State")
+key_query <- "&key=ef57316550be8b6492df7ca01b32a193c83ed8fc"
+```
+
+## Customizable function to query the API
+
+The function named `query_census_api` has the following inputs: year, numer_vars, cat_vars, geog, and geog_values. It also uses the functions `get_tibble` and `format_num_and_cat_vars` created earlier to return our data request into a nice usable format.
+
+-   **year**: this input parameter represents the "Year of survey" with the year 2022 as the default year and the input values must be between 2010 and 2022.
+
+-   **numer_vars**: this input parameter represents the numeric variables to be returned with 'AGEP' and 'PWGTP' as defaults. The variable 'PWGTP' will always be returned. This input parameter has the following options for the user: AGEP, GASP, GRPIP, JWAP (time), JWDP (time), and JWMNP.
+
+-   **cat_vars**: this input parameter represents the categorical variables to be returned with 'SEX' as the default value. This input parameter has the following options for the user: FER, HHL, HISPEED, JWTRNS, SCH, SCHL, and SEX.
+
+-   **geog**: this input parameter represents the geography level to be returned with 'State' as the default value. This input parameter has the following options for the user: All, Region, Division, and State
 
 ```{r}
 query_census_api <- function(year=2022, numer_vars=c("AGEP"), cat_vars=c("SEX"), geog="State", geog_values=c('12')){
@@ -141,7 +154,7 @@ data_tibble_test <- query_census_api(year=2021, numer_vars=c("AGEP"), cat_vars=c
 data_tibble_test
 ```
 
-Function to call the query function:
+To allow the user to specify multiple years of survey data we wrote the R function `query_with_years`.
 
 ```{r}
 query_with_years <- function(years=c(2022), ...){
@@ -162,10 +175,3 @@ data_tibble <- query_with_years(numer_vars=c("JWAP"))
 
 data_tibble
 ```
-
-
-
-
-
-
-
