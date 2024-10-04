@@ -53,14 +53,14 @@ census_tibble
 
 ```{r}
 format_num_and_cat_vars <- function(data_tibble, numer_vars, cat_vars){
-  for (var in numer_vars){
-    if(var == 'JWAP'){
-#      data_tibble <- data_tibble |>
-#                      rename('temp' = 'JWAP') |>
-#                      mutate('JWAP' = as_datetime('temp'))
-    }
+  if (all(numer_vars %in% all_numer_vars)){
+    data_tibble <- data_tibble %>%
+      mutate(across(numer_vars, as.numeric)) 
   }
-  
+  if (all(cat_vars %in% all_cat_vars)) {
+    data_tibble <- data_tibble %>%
+      mutate(across(cat_vars,as.factor)) 
+  } 
   return(data_tibble)
 }
 ```
