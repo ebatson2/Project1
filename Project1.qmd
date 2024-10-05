@@ -91,6 +91,9 @@ The function named `query_census_api` has the following arguments: year, numer_v
 -   **geog**: this argument represents the geography level to be returned with 'State' as the default value. This input parameter has the following options for the user: All, Region, Division, and State
 
 ```{r}
+#| message: FALSE
+#| echo: FALSE
+
 query_census_api <- function(year=2022, numer_vars=c("AGEP"), cat_vars=c("SEX"), geog="State", geog_values=c('12')){
   
   ######################INPUT VALIDATION######################
