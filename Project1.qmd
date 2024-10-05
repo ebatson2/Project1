@@ -1,5 +1,7 @@
 ---
 title: "ST558 Project 1"
+author: Elizabeth Batson and Dane Korver
+date: Sunday, October 6, 2024
 format: html
 editor: visual
 API key: ef57316550be8b6492df7ca01b32a193c83ed8fc
@@ -144,15 +146,16 @@ query_census_api <- function(year=2022, numer_vars=c("AGEP"), cat_vars=c("SEX"),
   data_info <- httr::GET(URL_census)
   data = get_tibble(data_info)
   clean_data = format_num_and_cat_vars(data, numer_vars, cat_vars)
-  class(clean_data) <- c("census",class(clean_data))
+  #class(clean_data) <- c("census",class(clean_data))
   #return(data)
 }
 
+#Testing our function
 #data_tibble_test <- query_census_api(year=2021, numer_vars=c("AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP", "PWGTP"))
 #data_tibble_test <- query_census_api(year=2021, numer_vars=c("AGEP"), cat_vars=c("HISPEED"), geog="State", geog_values=c("06", "24"))
 #data_tibble_test <- query_census_api(year=2021, numer_vars=c("AGEP"), cat_vars=c("HISPEED"), geog="State")
-#data_tibble_test <- query_census_api(year=2021, numer_vars=c("AGEP"), cat_vars=c("HISPEED"))
-#data_tibble_test
+data_tibble_test <- query_census_api(year=2021, numer_vars=c("AGEP"), cat_vars=c("HISPEED"))
+data_tibble_test
 ```
 
 To allow the user to specify multiple years of survey data we wrote the R function `query_with_years`.
@@ -172,14 +175,15 @@ query_with_years <- function(years=c(2022), ...){
   return(combined_tibble)
 }
 
-#data_tibble <- query_with_years(numer_vars=c("JWAP"))
-#data_tibble
+#Testing our function
+data_tibble <- query_with_years(numer_vars=c("GASP"))
+data_tibble
 
 ```
 
 ## Writing a Generic Function for Summarizing
 
-Now that we have our data, lets try to do something with it.  We created a function named `summary.census` that takes in three arguments: the tibble data set, the numeric variables (the default is all the numeric variables other than PWGTP) and any categorical variables that that you want to summarize. 
+Now that we have our data, lets try to do something with it. We created a function named `summary.census` that takes in three arguments: the tibble data set, the numeric variables (the default will summarize all the numeric variables other than PWGTP) and any categorical variables that that you want to summarize.
 
 ```{r}
 
@@ -203,4 +207,3 @@ summary.census <- function(data_tibble,numer_vars,cat_vars){
 ## End example
 
 This will be filled in later.
-
