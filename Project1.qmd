@@ -97,7 +97,6 @@ time
 
 ```{r}
 format_num_and_cat_vars <- function(data_tibble, numer_vars, cat_vars){
-<<<<<<< HEAD
   if('JWAP' %in% numer_vars){
     
     #lines from class discussion:
@@ -155,7 +154,6 @@ format_num_and_cat_vars <- function(data_tibble, numer_vars, cat_vars){
       mutate(across(all_of(cat_vars), as.factor)) |>
       mutate(across(numer_vars[numer_vars !="JWAP" & numer_vars!="GRPIP"], as.numeric))
   
-=======
   if (all(numer_vars %in% all_numer_vars)){
     data_tibble <- data_tibble %>%
       mutate(across(numer_vars, as.numeric)) 
@@ -164,7 +162,6 @@ format_num_and_cat_vars <- function(data_tibble, numer_vars, cat_vars){
     data_tibble <- data_tibble %>%
       mutate(across(cat_vars,as.factor)) 
   } 
->>>>>>> 6bccc324422d2d8fef9bcbe21cd204fa990123ce
   return(data_tibble)
 }
 ```
@@ -257,28 +254,22 @@ query_census_api <- function(year=2022, numer_vars=c("AGEP"), cat_vars=c("SEX"),
   
   data_info <- httr::GET(URL_census)
   data = get_tibble(data_info)
-<<<<<<< HEAD
   clean_data = format_num_and_cat_vars(data[1:100,], numer_vars, cat_vars)
   #class(clean_data) <- c("census",class(clean_data))
   return(clean_data)
-=======
   clean_data = format_num_and_cat_vars(data, numer_vars, cat_vars)
   #class(clean_data) <- c("census",class(clean_data))
   #return(data)
->>>>>>> 6bccc324422d2d8fef9bcbe21cd204fa990123ce
 }
 
 #Testing our function
 #data_tibble_test <- query_census_api(year=2021, numer_vars=c("AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP", "PWGTP"))
 #data_tibble_test <- query_census_api(year=2021, numer_vars=c("AGEP"), cat_vars=c("HISPEED"), geog="State", geog_values=c("06", "24"))
 #data_tibble_test <- query_census_api(year=2021, numer_vars=c("AGEP"), cat_vars=c("HISPEED"), geog="State")
-<<<<<<< HEAD
 #data_tibble_test <- query_census_api(year=2018, numer_vars=c("AGEP"), cat_vars=c("HISPEED"))
 #data_tibble_test
-=======
 data_tibble_test <- query_census_api(year=2021, numer_vars=c("AGEP"), cat_vars=c("HISPEED"))
 data_tibble_test
->>>>>>> 6bccc324422d2d8fef9bcbe21cd204fa990123ce
 ```
 
 To allow the user to specify multiple years of survey data we wrote the R function `query_with_years`.
@@ -298,12 +289,9 @@ query_with_years <- function(years=c(2022), ...){
   return(combined_tibble)
 }
 
-<<<<<<< HEAD
 data_tibble <- query_with_years(numer_vars=c("JWAP", "GASP"))
-=======
 #Testing our function
 data_tibble <- query_with_years(numer_vars=c("GASP"))
->>>>>>> 6bccc324422d2d8fef9bcbe21cd204fa990123ce
 data_tibble
 
 ```
