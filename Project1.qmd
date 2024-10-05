@@ -1,5 +1,7 @@
 ---
 title: "ST558 Project 1"
+author: Elizabeth Batson and Dane Korver
+date: Sunday, October 6, 2024
 format: html
 editor: visual
 API key: ef57316550be8b6492df7ca01b32a193c83ed8fc
@@ -12,6 +14,7 @@ API key: ef57316550be8b6492df7ca01b32a193c83ed8fc
 # Load libraries
 library(jsonlite)
 library(tidyverse)
+library(hms)
 library(ggplot2)
 ```
 
@@ -52,18 +55,115 @@ census_tibble
 ```
 
 ```{r}
+get_time <- function(num){
+  val <- (num-1)*5 + 2
+  
+  min <- val %% 60
+  hr <- floor(val / 60)
+  
+  time <- paste0(as.character(hr), ':', as.character(min), ':00')
+  
+  print(num)
+
+  return(time)
+}
+
+get_time(8)
+```
+
+```{r}
+#get the JWAP info
+temp <- httr::GET("https://api.census.gov/data/2022/acs/acs1/pums/variables/JWAP.json")
+#turn it into a list
+temp_list <- temp$content |> rawToChar() |>jsonlite::fromJSON()
+#grab just the names of JWAP and their values
+JWAP <- temp_list$values$item
+#reorder just so it is clearer
+JWAP_values <- JWAP[sort(names(JWAP))]
+
+val <- JWAP_values$`150`
+val
+time <- substring(val, 1, regexpr('to', val,)-2)
+time <- lubridate::hm(time)
+
+if(grepl('p.m.', val) & (time@hour!=12)){
+  time <- time + hm('12, 2')
+} else {
+  time <- time + hm('0, 2')
+}
+
+time
+```
+
+```{r}
 format_num_and_cat_vars <- function(data_tibble, numer_vars, cat_vars){
-  for (var in numer_vars){
-    if(var == 'JWAP'){
-#      data_tibble <- data_tibble |>
-#                      rename('temp' = 'JWAP') |>
-#                      mutate('JWAP' = as_datetime('temp'))
+  if('JWAP' %in% numer_vars){
+    
+    #lines from class discussion:
+    #get the JWAP info
+    temp <- httr::GET("https://api.census.gov/data/2022/acs/acs1/pums/variables/JWAP.json")
+    #turn it into a list
+    temp_list <- temp$content |> rawToChar() |>jsonlite::fromJSON()
+    #grab just the names of JWAP and their values
+    JWAP <- temp_list$values$item
+    #reorder just so it is clearer
+    JWAP_values <- JWAP[sort(names(JWAP))]
+    JWAP_values <- as_tibble(JWAP_values)
+    colnames(JWAP_values) <- as.numeric(names(JWAP_values))
+    
+    data_tibble <- data_tibble |>
+      mutate(JWAP = as.numeric(JWAP))
+    
+    # data_tibble['JWAP_time'] <- period()
+    data_tibble['JWAP_time'] <- hm("0, 0")
+    
+    for(i in seq_along(data_tibble$JWAP)){
+      
+      if(data_tibble$JWAP[i]== 0){
+        #data_tibble$JWAP_time[i] <- NA
+        
+      } else {
+        
+        
+        val <- data_tibble$JWAP[i]
+        val <- JWAP_values[val]
+        
+        time <- substring(val, 1, regexpr('to', val,)-2)
+        time <- lubridate::hm(time)
+        
+        if(grepl('p.m.', val) & (time@hour!=12)){
+          time <- time + hm('12, 2')
+        } else {
+          time <- time + hm('0, 2')
+        }
+
+        print(time)
+        
+        data_tibble$JWAP_time[i] <- time
+        
+        print(data_tibble$JWAP_time[i])
+      }
     }
   }
+  
+  if('GRPIP'  %in% numer_vars){
+    
+  }
+  
+  data_tibble <- data_tibble |>
+      mutate(across(all_of(cat_vars), as.factor)) |>
+      mutate(across(numer_vars[numer_vars !="JWAP" & numer_vars!="GRPIP"], as.numeric))
   
   return(data_tibble)
 }
 ```
+
+```{r}
+JWAP_values <- as_tibble(JWAP_values)
+colnames(JWAP_values) <- as.numeric(names(JWAP_values))
+JWAP_values
+```
+
 
 We created five vectors named `all_numer_vars`, `time_vars`, `all_cat_vars`, `all_geog`, `key_query` that had our variables that we would need for our future function for input validation.
 
@@ -89,15 +189,18 @@ The function named `query_census_api` has the following arguments: year, numer_v
 -   **geog**: this argument represents the geography level to be returned with 'State' as the default value. This input parameter has the following options for the user: All, Region, Division, and State
 
 ```{r}
+#| message: FALSE
+#| echo: FALSE
+
 query_census_api <- function(year=2022, numer_vars=c("AGEP"), cat_vars=c("SEX"), geog="State", geog_values=c('12')){
   
   ######################INPUT VALIDATION######################
-  #year
-  if ((!year %in% 2010:2022)){
-    stop("Year must be between 2010 and 2022.")
+  #year validation
+  if ((!year %in% c(2010:2019, 2021:2022))){
+    stop("Year must be between 2010 and 2022, excluding 2020.")
   }
   
-  #numer_vars
+  #numer_vars validation
   numer_vars <- union(numer_vars, "PWGTP")
   
   if(length(numer_vars) < 2) {
@@ -106,14 +209,14 @@ query_census_api <- function(year=2022, numer_vars=c("AGEP"), cat_vars=c("SEX"),
     stop("numer_vars includes variables which are not in the allowed set, which is AGEP, GASP, GRPIP, JWAP, JWDP, JWMNP, and PWGTP")
   }
   
-  #cat_vars
+  #cat_vars validation
   if(length(cat_vars) < 1) {
     stop("Not enough categorical variables specified. Options are FER, HHL, HISPEED, JWTRNS, SCH, SCHL, and SEX")
   } else if(length(union(all_cat_vars, cat_vars)) > length(all_cat_vars)){
     stop("cat_vars includes variables which are not in the allowed set, which is FER, HHL, HISPEED, JWTRNS, SCH, SCHL, and SEX")
   }
   
-  #geog
+  #geog validation
   if (!(geog %in% all_geog)){
     stop("invalid value for geog. Options are All, Region, Division, and State")
   }
@@ -143,15 +246,16 @@ query_census_api <- function(year=2022, numer_vars=c("AGEP"), cat_vars=c("SEX"),
   
   data_info <- httr::GET(URL_census)
   data = get_tibble(data_info)
-  clean_data = format_num_and_cat_vars(data, numer_vars, cat_vars)
-  class(clean_data) <- c("census",class(clean_data))
-  #return(data)
+  clean_data = format_num_and_cat_vars(data[1:100,], numer_vars, cat_vars)
+  #class(clean_data) <- c("census",class(clean_data))
+  return(clean_data)
 }
 
+#Testing our function
 #data_tibble_test <- query_census_api(year=2021, numer_vars=c("AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP", "PWGTP"))
 #data_tibble_test <- query_census_api(year=2021, numer_vars=c("AGEP"), cat_vars=c("HISPEED"), geog="State", geog_values=c("06", "24"))
 #data_tibble_test <- query_census_api(year=2021, numer_vars=c("AGEP"), cat_vars=c("HISPEED"), geog="State")
-#data_tibble_test <- query_census_api(year=2021, numer_vars=c("AGEP"), cat_vars=c("HISPEED"))
+#data_tibble_test <- query_census_api(year=2018, numer_vars=c("AGEP"), cat_vars=c("HISPEED"))
 #data_tibble_test
 ```
 
@@ -172,14 +276,14 @@ query_with_years <- function(years=c(2022), ...){
   return(combined_tibble)
 }
 
-#data_tibble <- query_with_years(numer_vars=c("JWAP"))
-#data_tibble
+data_tibble <- query_with_years(numer_vars=c("JWAP", "GASP"))
+data_tibble
 
 ```
 
 ## Writing a Generic Function for Summarizing
 
-Now that we have our data, lets try to do something with it.  We created a function named `summary.census` that takes in three arguments: the tibble data set, the numeric variables (the default is all the numeric variables other than PWGTP) and any categorical variables that that you want to summarize. 
+Now that we have our data, lets try to do something with it. We created a function named `summary.census` that takes in three arguments: the tibble data set, the numeric variables (the default will summarize all the numeric variables other than PWGTP) and any categorical variables that that you want to summarize.
 
 ```{r}
 
