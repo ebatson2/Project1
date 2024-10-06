@@ -45,6 +45,8 @@ get_tibble <- function(data_info){
   
   census_data <- data.frame(parsed[-1,])
   names(census_data) <- parsed[1,]
+  
+  print(census_data)
 
   return(as_tibble(census_data))
 }
@@ -112,7 +114,7 @@ format_num_and_cat_vars <- function(data_tibble, numer_vars, cat_vars){
   }
   
   # process JWDP time variable
-  if('JWDP'  %in% numer_vars){
+  if('JWDP' %in% numer_vars){
     
     #lines from class discussion:
     #get the JWDP info
@@ -165,22 +167,72 @@ format_num_and_cat_vars <- function(data_tibble, numer_vars, cat_vars){
       rename(JWDP=JWDP_time)
   }
   
-  # convert numeric vars to numeric type, categorical vars to factors
+  # map the received values of categorical variables to their meaningful values and convert to factors
+  if("FER" %in% cat_vars){
+    data_tibble <- data_tibble |>
+      mutate(data_tibble, Recent_Birth=case_match(FER, "0"~"N/A", "1"~"Yes", "2"~"No")) |>
+      mutate(Recent_Birth=as.factor(Recent_Birth)) |>
+      select(!c("FER"))
+  }
+  
+  if("SEX" %in% cat_vars){
+    data_tibble <- data_tibble |>
+      mutate(data_tibble, Sex=case_match(SEX, "1"~"Male", "2"~"Female")) |>
+      mutate(Sex=as.factor(Sex)) |>
+      select(!c("SEX"))
+  }
+  
+  if("HHL" %in% cat_vars){
+    data_tibble <- data_tibble |>
+      mutate(data_tibble, Language=case_match(HHL, "0"~"N/A", "1"~"English Only", "2"~"Spanish", "3"~"Other Indo-European languages", "4"~"Asian and Pacific Island languages", "5"~"Other Language")) |>
+      mutate(Language=as.factor(Language)) |>
+      select(!c("HHL"))
+  }
+  
+  if("HISPEED" %in% cat_vars){
+    data_tibble <- data_tibble |>
+      mutate(data_tibble, Highspeed_Internet=case_match(HISPEED, "0"~"N/A", "1"~"Yes", "2"~"No")) |>
+      mutate(Highspeed_Internet=as.factor(Highspeed_Internet)) |>
+      select(!c("HISPEED"))
+  }
+  
+  if("JWTRNS" %in% cat_vars){
+    data_tibble <- data_tibble |>
+      mutate(data_tibble, Transportation_to_Work=case_match(JWTRNS, "0"~"N/A", "1"~"Car, truck, or van", "2"~"Bus", "3"~"Subway or elevated rail", "4"~"Long-distance train or commuter rail", "5"~"Light rail, streetcar, or trolley", "6"~"Ferryboat", "7"~"Taxicab", "8"~"Motorcycle", "9"~"Bicycle", "10"~"Walked", "11"~"Worked from home", "12"~"Other method")) |>
+      mutate(Transportation_to_Work=as.factor(Transportation_to_Work)) |>
+      select(!c("JWTRNS"))
+  }
+  
+  if("SCH" %in% cat_vars){
+    data_tibble <- data_tibble |>
+      mutate(data_tibble, School_Enrollment=case_match(SCH, "0"~"N/A", "1"~"No", "2"~"Public", "3"~"private")) |>
+      mutate(School_Enrollment=as.factor(School_Enrollment)) |>
+      select(!c("SCH"))
+  }
+  
+  if("SCHL" %in% cat_vars){
+    data_tibble <- data_tibble |>
+      mutate(data_tibble, Educational_Attainment=case_match(SCHL, "0"~"N/A", "1"~"None", "2"~"Nursery/Preschool", "3"~"Kindergarten", "4"~"Grade 1", "5"~"Grade 2", "6"~"Grade 3", "7"~"Grade 4", "8"~"Grade 5", "9"~"Grade 6", "10"~"Grade 7", "11"~"Grade 8", "12"~"Grade 9", "13"~"Grade 10", "14"~"Grade 11", "15"~"Grade 12, no diploma", "16"~"HS Diploma", "17"~"GED or alt cred", "18"~"Some college (<1 year)", "19"~"Some college (>1 year), no degree", "20"~"Associate's degree", "21"~"Bachelor's degree", "22"~"Master's degree", "23"~"Professional degree beyond a bachelor's degree", "24"~"Doctorate degree")) |>
+      mutate(Educational_Attainment=as.factor(Educational_Attainment)) |>
+      select(!c("SCHL"))
+}
+  
+  # get rid of renamed columns, convert numeric vars to numeric type, categorical vars to factors
   data_tibble <- data_tibble |>
-    mutate(across(all_of(cat_vars), as.factor)) |>
-    mutate(across(numer_vars[numer_vars !="JWAP" & numer_vars!="JWDP"], as.numeric))
-
+    mutate(across(numer_vars[numer_vars !="JWAP" & numer_vars!="JWDP"], as.numeric)) |>
+    rename(any_of(c(Age="AGEP", Gas_bill_monthly=GASP, Rent_Percent_of_Income=GRPIP, Arrive_at_Work=JWAP, Depart_for_Work=JWDP, Work_Travel_Time=JWMNP, Weight=PWGTP, State=state)))
+  
   return(data_tibble)
 }
 ```
 
-We created five vectors named `all_numer_vars`, `time_vars`, `all_cat_vars`, `all_geog`, `key_query` that had our variables that we would need for our future function for input validation.
+We created four vectors named `all_numer_vars`, `all_cat_vars`, `all_geog`, `key_query` that had our variables that we would need for our future function for input validation.
 
 ```{r}
 #constants needed in the code chunk below
 all_numer_vars = c("AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP", "PWGTP")
-time_vars = c("JWAP", "JWDP")
-all_cat_vars = c("FER", "HHL", "HISPEED", "JWTRNS", "SCH", "SCHL", "SEX")
+# time_vars = c("JWAP", "JWDP")
+all_cat_vars = c("FER", "HHL", "HISPEED", "JWTRNS", "SCH", "SEX", "SCHL")
 all_geog = c("All", "Region", "Division", "State")
 key_query <- "&key=ef57316550be8b6492df7ca01b32a193c83ed8fc"
 ```
@@ -222,7 +274,7 @@ query_census_api <- function(year=2022, numer_vars=c("AGEP"), cat_vars=c("SEX"),
   if(length(cat_vars) < 1) {
     stop("Not enough categorical variables specified. Options are FER, HHL, HISPEED, JWTRNS, SCH, SCHL, and SEX")
   } else if(length(union(all_cat_vars, cat_vars)) > length(all_cat_vars)){
-    stop("cat_vars includes variables which are not in the allowed set, which is FER, HHL, HISPEED, JWTRNS, SCH, SCHL, and SEX")
+    stop("cat_vars includes variables which are not in the allowed set, which is FER, HHL, HISPEED, JWTRNS, SCH, and SEX")
   }
   
   #geog validation
@@ -250,12 +302,12 @@ query_census_api <- function(year=2022, numer_vars=c("AGEP"), cat_vars=c("SEX"),
                       "get=",
                       vars_query,
                       geog_query,
-                      "&SCHL=24",
+                      # "&SCHL=24",
                       key_query)
   
   data_info <- httr::GET(URL_census)
   data = get_tibble(data_info)
-  clean_data = format_num_and_cat_vars(data, numer_vars, cat_vars)
+  clean_data = format_num_and_cat_vars(data[1:100,], numer_vars, cat_vars)
   #class(clean_data) <- c("census",class(clean_data))
   return(clean_data)
 }
@@ -277,7 +329,7 @@ query_with_years <- function(years=c(2022), ...){
   
   for(i in seq_along(years)){
     year_tibble <- query_census_api(year=years[i], ...) |>
-                      mutate(year=years[i])
+                      mutate(Year=years[i])
     
     combined_tibble <- bind_rows(combined_tibble, year_tibble)
   }
@@ -287,7 +339,11 @@ query_with_years <- function(years=c(2022), ...){
 
 #Testing our function
 # data_tibble <- query_with_years(numer_vars=c("JWAP", "GASP"))
-data_tibble <- query_with_years(numer_vars=c("JWDP", "JWAP", "GASP"))
+# data_tibble <- query_with_years(numer_vars=c("JWDP", "JWAP", "GASP"))
+# data_tibble <- query_with_years(years=c(2019, 2021, 2022), numer_vars=all_numer_vars)
+# data_tibble <- query_with_years(years=c(2019), numer_vars=all_numer_vars)
+data_tibble <- query_with_years(years=c(2019), cat_vars=all_cat_vars)
+# data_tibble <- query_with_years(years=c(2019))
 data_tibble
 
 ```
