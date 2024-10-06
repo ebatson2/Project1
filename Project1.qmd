@@ -56,6 +56,8 @@ get_tibble <- function(data_info){
 
 ```{r}
 format_num_and_cat_vars <- function(data_tibble, numer_vars, cat_vars){
+  
+  # process JWAP time variable
   if('JWAP' %in% numer_vars){
     
     #lines from class discussion:
@@ -70,50 +72,106 @@ format_num_and_cat_vars <- function(data_tibble, numer_vars, cat_vars){
     JWAP_values <- as_tibble(JWAP_values)
     colnames(JWAP_values) <- as.numeric(names(JWAP_values))
     
+    # convert JWAP to numeric
     data_tibble <- data_tibble |>
       mutate(JWAP = as.numeric(JWAP))
     
+    # make new column for JWAP time values of type Period
     data_tibble['JWAP_time'] <- hm("0, 0")
     
+    # fill in values for JWAP_time column
     for(i in seq_along(data_tibble$JWAP)){
       
       if(!data_tibble$JWAP[i]== 0){
         
         val <- data_tibble$JWAP[i]
         val <- JWAP_values[val+1]
+
+        time1 <- lubridate::hm(substring(val, 1, regexpr('to', val,)-2))
+        time2 <- lubridate::hm(substring(val, regexpr('to', val,)+3))
         
-        time <- substring(val, 1, regexpr('to', val,)-2)
-        time <- lubridate::hm(time)
+        diff <- time2-time1
+        if(diff@hour>0 | second(diff)>0){stop("can't handle time diff")}
+        
+        min_offset <- floor(diff@minute/2)
+        sec_offset <- (diff@minute/2 - floor(diff@minute/2))*60
+        
+        time <- time1 + lubridate::hms(paste("0", min_offset, sec_offset, sep=", "))
         
         if(grepl('p.m.', val) & (time@hour!=12)){
-          time <- time + hm('12, 2')
-        } else {
-          time <- time + hm('0, 2')
+          time <- time + lubridate::hms('12, 0, 0')
         }
         
         data_tibble$JWAP_time[i] <- time
       }
     }
-  }
-  
-  if('GRPIP'  %in% numer_vars){
     
+    data_tibble <- data_tibble |>
+      select(!c(JWAP)) |>
+      rename(JWAP=JWAP_time)
   }
   
+  # process JWDP time variable
+  if('JWDP'  %in% numer_vars){
+    
+    #lines from class discussion:
+    #get the JWDP info
+    temp <- httr::GET("https://api.census.gov/data/2022/acs/acs1/pums/variables/JWDP.json")
+    #turn it into a list
+    temp_list <- temp$content |> rawToChar() |>jsonlite::fromJSON()
+    #grab just the names of JWDP and their values
+    JWDP <- temp_list$values$item
+    #reorder just so it is clearer
+    JWDP_values <- JWDP[sort(names(JWDP))]
+    JWDP_values <- as_tibble(JWDP_values)
+    colnames(JWDP_values) <- as.numeric(names(JWDP_values))
+    
+    # convert JWDP to numeric
+    data_tibble <- data_tibble |>
+      mutate(JWDP = as.numeric(JWDP))
+    
+    # make new column for JWDP time values of type Period
+    data_tibble['JWDP_time'] <- hm("0, 0")
+    
+    # fill in values for JWDP_time column
+    for(i in seq_along(data_tibble$JWDP)){
+      
+      if(!data_tibble$JWDP[i]== 0){
+        
+        val <- data_tibble$JWDP[i]
+        val <- JWDP_values[val+1]
+        
+        time1 <- lubridate::hm(substring(val, 1, regexpr('to', val,)-2))
+        time2 <- lubridate::hm(substring(val, regexpr('to', val,)+3))
+        
+        diff <- time2-time1
+        if(diff@hour>0 | second(diff)>0){stop("can't handle time diff")}
+        
+        min_offset <- floor(diff@minute/2)
+        sec_offset <- (diff@minute/2 - floor(diff@minute/2))*60
+        
+        time <- time1 + lubridate::hms(paste("0", min_offset, sec_offset, sep=", "))
+        
+        if(grepl('p.m.', val) & (time@hour!=12)){
+          time <- time + lubridate::hms('12, 0, 0')
+        }
+        
+        data_tibble$JWDP_time[i] <- time
+      }
+    }
+    
+    data_tibble <- data_tibble |>
+      select(!c(JWDP)) |>
+      rename(JWDP=JWDP_time)
+  }
+  
+  # convert numeric vars to numeric type, categorical vars to factors
   data_tibble <- data_tibble |>
     mutate(across(all_of(cat_vars), as.factor)) |>
-    mutate(across(numer_vars[numer_vars !="JWAP" & numer_vars!="GRPIP"], as.numeric)) |>
-    select(!c(JWAP)) |>
-    rename(JWAP=JWAP_time)
+    mutate(across(numer_vars[numer_vars !="JWAP" & numer_vars!="JWDP"], as.numeric))
 
   return(data_tibble)
 }
-```
-
-```{r}
-JWAP_values <- as_tibble(JWAP_values)
-colnames(JWAP_values) <- as.numeric(names(JWAP_values))
-JWAP_values
 ```
 
 We created five vectors named `all_numer_vars`, `time_vars`, `all_cat_vars`, `all_geog`, `key_query` that had our variables that we would need for our future function for input validation.
@@ -228,8 +286,9 @@ query_with_years <- function(years=c(2022), ...){
 }
 
 #Testing our function
-#data_tibble <- query_with_years(numer_vars=c("JWAP", "GASP"))
-#data_tibble
+# data_tibble <- query_with_years(numer_vars=c("JWAP", "GASP"))
+data_tibble <- query_with_years(numer_vars=c("JWDP", "JWAP", "GASP"))
+data_tibble
 
 ```
 
