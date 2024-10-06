@@ -357,7 +357,8 @@ summary.census <- function(data_tibble,numer_vars="All",cat_vars="All"){
   if (numer_vars != "All" | cat_vars != "All") {    
     for(i in seq_along(numer_vars)){
       numer_col <- data_tibble[[numer_vars[i]]]
-      weight_col <- data_tibble$PWGTP
+      # weight_col <- data_tibble$PWGTP
+      weight_col <- data_tibble$Weight
       var_col<-paste(numer_vars[i])
       
       #Find mean and sd of numeric variables
@@ -371,14 +372,16 @@ summary.census <- function(data_tibble,numer_vars="All",cat_vars="All"){
     #if user doesn't specify variables to summarize
   } else {
     for(i in seq_along(names(data_tibble))){
-      if (names(data_tibble)[i] != "PWGTP") {
+      # if (names(data_tibble)[i] != "PWGTP") {
+      if (names(data_tibble)[i] != "Weight") {
         if (!is.numeric(data_tibble[[i]])) {
           numer_col <- as.numeric(data_tibble[[i]])
         }
         else {
           numer_col <- data_tibble[[i]] 
         }
-        weight_col <- data_tibble$PWGTP
+        # weight_col <- data_tibble$PWGTP
+        weight_col <- data_tibble$Weight
         var_col<-names(data_tibble)[i]
         
         #Find mean and sd of numeric variables
@@ -408,7 +411,8 @@ graph.census <- function(data_tibble,num_var="AGEP",cat_var="SEX"){
 
   #creating a basic boxplot
   graph <- ggplot(data_tibble,
-  aes(x = get(cat_var), y = get(num_var), weight = PWGTP)) +
+  # aes(x = get(cat_var), y = get(num_var), weight = PWGTP)) +
+  aes(x = get(cat_var), y = get(num_var), weight = Weight)) +
   geom_boxplot()
   return(graph)
 
