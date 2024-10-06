@@ -50,8 +50,8 @@ get_tibble <- function(data_info){
 }
 
 #Testing our function
-census_tibble <- get_tibble(census_info)
-census_tibble
+#census_tibble <- get_tibble(census_info)
+#census_tibble
 ```
 
 ```{r}
@@ -228,8 +228,8 @@ query_with_years <- function(years=c(2022), ...){
 }
 
 #Testing our function
-data_tibble <- query_with_years(numer_vars=c("JWAP", "GASP"))
-data_tibble
+#data_tibble <- query_with_years(numer_vars=c("JWAP", "GASP"))
+#data_tibble
 
 ```
 
@@ -243,7 +243,7 @@ summary.census <- function(data_tibble,numer_vars="All",cat_vars="All"){
 
   class(data_tibble) <- c("census",class(data_tibble))
   summary_tibble = tibble()
-
+  #if user specifies variables to summarize
   if (numer_vars != "All" | cat_vars != "All") {    
     for(i in seq_along(numer_vars)){
       numer_col <- data_tibble[[numer_vars[i]]]
@@ -258,6 +258,7 @@ summary.census <- function(data_tibble,numer_vars="All",cat_vars="All"){
   
       summary_tibble <- bind_rows(summary_tibble,tibble(variable=var_col,mean=sample_mean,sd=sample_sd))    
     }
+    #if user doesn't specify variables to summarize
   } else {
     for(i in seq_along(names(data_tibble))){
       if (names(data_tibble)[i] != "PWGTP") {
@@ -285,7 +286,7 @@ summary.census <- function(data_tibble,numer_vars="All",cat_vars="All"){
 }
 #test function 
 #summary_test<-summary.census(data_tibble_test,numer_vars=c("AGEP"),cat_vars=c("FER","SEX","HISPEED"))
-summary_test<-summary.census(data_tibble_test)
+#summary_test<-summary.census(data_tibble_test)
 
 ```
 
@@ -302,10 +303,17 @@ graph.census <- function(data_tibble,num_var="AGEP",cat_var="SEX"){
   return(graph)
 
 }
-#graph.census(data_tibble_test)
 
 ```
 
-## End example
+## End example (Conclusion)
 
-This will be filled in later.
+We have created several functions (`get_tibble`,`format_num_and_cat_vars`,`query_census_api`,`query_with_years`,`summary.census`,`graph.census`) that will manipulate and process data sets that come from the Public Use Microdata Sample (PUMS) Census API. Lets show a simple example of using them. 
+
+```{r}
+
+
+
+```
+
+
