@@ -351,7 +351,7 @@ summary_test<-summary.census(data_tibble_test)
 
 ```
 
-Finally, we created a basic graph function that takes in three arguments: the tibble data set, a numeric variables (the default variable is AGEP) and a categorical variable that you want to summarize (the default variable is SEX). 
+Finally, we created a basic graph function that takes in three arguments: the tibble data set, a numeric variables (the default variable is AGEP) and a categorical variable that you want to summarize (the default variable is SEX).
 
 ```{r}
 
