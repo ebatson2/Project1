@@ -55,47 +55,6 @@ census_tibble
 ```
 
 ```{r}
-get_time <- function(num){
-  val <- (num-1)*5 + 2
-  
-  min <- val %% 60
-  hr <- floor(val / 60)
-  
-  time <- paste0(as.character(hr), ':', as.character(min), ':00')
-  
-  print(num)
-
-  return(time)
-}
-
-get_time(8)
-```
-
-```{r}
-#get the JWAP info
-temp <- httr::GET("https://api.census.gov/data/2022/acs/acs1/pums/variables/JWAP.json")
-#turn it into a list
-temp_list <- temp$content |> rawToChar() |>jsonlite::fromJSON()
-#grab just the names of JWAP and their values
-JWAP <- temp_list$values$item
-#reorder just so it is clearer
-JWAP_values <- JWAP[sort(names(JWAP))]
-
-val <- JWAP_values$`150`
-val
-time <- substring(val, 1, regexpr('to', val,)-2)
-time <- lubridate::hm(time)
-
-if(grepl('p.m.', val) & (time@hour!=12)){
-  time <- time + hm('12, 2')
-} else {
-  time <- time + hm('0, 2')
-}
-
-time
-```
-
-```{r}
 format_num_and_cat_vars <- function(data_tibble, numer_vars, cat_vars){
   if('JWAP' %in% numer_vars){
     
@@ -114,19 +73,14 @@ format_num_and_cat_vars <- function(data_tibble, numer_vars, cat_vars){
     data_tibble <- data_tibble |>
       mutate(JWAP = as.numeric(JWAP))
     
-    # data_tibble['JWAP_time'] <- period()
     data_tibble['JWAP_time'] <- hm("0, 0")
     
     for(i in seq_along(data_tibble$JWAP)){
       
-      if(data_tibble$JWAP[i]== 0){
-        #data_tibble$JWAP_time[i] <- NA
-        
-      } else {
-        
+      if(!data_tibble$JWAP[i]== 0){
         
         val <- data_tibble$JWAP[i]
-        val <- JWAP_values[val]
+        val <- JWAP_values[val+1]
         
         time <- substring(val, 1, regexpr('to', val,)-2)
         time <- lubridate::hm(time)
@@ -136,12 +90,8 @@ format_num_and_cat_vars <- function(data_tibble, numer_vars, cat_vars){
         } else {
           time <- time + hm('0, 2')
         }
-
-        print(time)
         
         data_tibble$JWAP_time[i] <- time
-        
-        print(data_tibble$JWAP_time[i])
       }
     }
   }
@@ -151,8 +101,10 @@ format_num_and_cat_vars <- function(data_tibble, numer_vars, cat_vars){
   }
   
   data_tibble <- data_tibble |>
-      mutate(across(all_of(cat_vars), as.factor)) |>
-      mutate(across(numer_vars[numer_vars !="JWAP" & numer_vars!="GRPIP"], as.numeric))
+    mutate(across(all_of(cat_vars), as.factor)) |>
+    mutate(across(numer_vars[numer_vars !="JWAP" & numer_vars!="GRPIP"], as.numeric)) |>
+    select(!c(JWAP)) |>
+    rename(JWAP=JWAP_time)
 
   return(data_tibble)
 }
@@ -245,7 +197,7 @@ query_census_api <- function(year=2022, numer_vars=c("AGEP"), cat_vars=c("SEX"),
   
   data_info <- httr::GET(URL_census)
   data = get_tibble(data_info)
-  clean_data = format_num_and_cat_vars(data[1:100,], numer_vars, cat_vars)
+  clean_data = format_num_and_cat_vars(data, numer_vars, cat_vars)
   #class(clean_data) <- c("census",class(clean_data))
   return(clean_data)
 }
