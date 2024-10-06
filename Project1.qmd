@@ -367,12 +367,10 @@ graph.census <- function(data_tibble,num_var="AGEP",cat_var="SEX"){
 
 ## End example (Conclusion)
 
-We have created several functions (`get_tibble`,`format_num_and_cat_vars`,`query_census_api`,`query_with_years`,`summary.census`,`graph.census`) that will manipulate and process data sets that come from the Public Use Microdata Sample (PUMS) Census API. Lets show a simple example of using them. 
+We have created several functions (`get_tibble`,`format_num_and_cat_vars`,`query_census_api`,`query_with_years`,`summary.census`,`graph.census`) that will manipulate and process data sets that come from the Public Use Microdata Sample (PUMS) Census API. Lets show a simple example of using them.
 
 ```{r}
 
 
 
 ```
-
-
