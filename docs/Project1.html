@@ -149,7 +149,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="introduction" class="level1">
 <h1>Introduction</h1>
-<p>Our goal for this project is to write functions that will manipulate and process data sets that come from the Public Use Microdata Sample (PUMS) Census API. This API gives pseudo person-level data. We’ll create generic functions to automatically summarize and plot certain returned data.</p>
+<p>Our goal for this project is to write functions that will manipulate and process data sets that come from the Public Use Microdata Sample (PUMS) Census API. This API gives pseudo person-level data. We’ll create generic functions to automatically summarize and plot the returned data.</p>
 </section>
 <section id="basic-example" class="level1">
 <h1>Basic Example</h1>
@@ -162,7 +162,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="data-processing" class="level1">
 <h1>Data Processing</h1>
-<p>To be able to write a customizable function to query the Census API, we wrote a couple helper functions one named <code>get_tibble</code> to take what is returned by GET() and turn it into a tibble and tested it with our <code>census_info</code> R object that we created earlier and saved the tibble as an R object named <code>census_tibble</code>. The second helper function named <code>format_num_and_cat_vars</code> to make numeric variable columns numeric, time column datetime, and categorical columns levels.</p>
+<p>To be able to write a customizable function to query the Census API, we wrote a couple of helper functions. <code>get_tibble()</code> takes what is returned by GET() and turns it into a tibble. We tested <code>get_tibble()</code> with our <code>census_info</code> R object that we created earlier and saved the tibble as a tibble named <code>census_tibble</code>. The second helper function named <code>format_num_and_cat_vars</code> makes numeric variable columns numeric, time columns period objects, and categorical columns factors.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>get_tibble <span class="ot">&lt;-</span> <span class="cf">function</span>(data_info){</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  </span>
@@ -177,185 +177,204 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>}</span>
 <span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co">#Testing our function</span></span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="co">#census_tibble &lt;- get_tibble(census_info)</span></span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co">#census_tibble</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>census_tibble <span class="ot">&lt;-</span> <span class="fu">get_tibble</span>(census_info)</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(census_tibble)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 6 × 4
+  SEX   PWGTP MAR   SCHL 
+  &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt;
+1 2     6     5     24   
+2 2     23    2     24   
+3 1     23    3     24   
+4 1     80    5     24   
+5 1     16    1     24   
+6 1     107   3     24   </code></pre>
+</div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>format_num_and_cat_vars <span class="ot">&lt;-</span> <span class="cf">function</span>(data_tibble, numer_vars, cat_vars){</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># process JWAP time variable</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="st">'JWAP'</span> <span class="sc">%in%</span> numer_vars){</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">#lines from class discussion:</span></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">#get the JWAP info</span></span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    temp <span class="ot">&lt;-</span> httr<span class="sc">::</span><span class="fu">GET</span>(<span class="st">"https://api.census.gov/data/2022/acs/acs1/pums/variables/JWAP.json"</span>)</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">#turn it into a list</span></span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    temp_list <span class="ot">&lt;-</span> temp<span class="sc">$</span>content <span class="sc">|&gt;</span> <span class="fu">rawToChar</span>() <span class="sc">|&gt;</span>jsonlite<span class="sc">::</span><span class="fu">fromJSON</span>()</span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">#grab just the names of JWAP and their values</span></span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    JWAP <span class="ot">&lt;-</span> temp_list<span class="sc">$</span>values<span class="sc">$</span>item</span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="co">#reorder just so it is clearer</span></span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    JWAP_values <span class="ot">&lt;-</span> JWAP[<span class="fu">sort</span>(<span class="fu">names</span>(JWAP))]</span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    JWAP_values <span class="ot">&lt;-</span> <span class="fu">as_tibble</span>(JWAP_values)</span>
-<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">colnames</span>(JWAP_values) <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">names</span>(JWAP_values))</span>
-<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    <span class="co"># convert JWAP to numeric</span></span>
-<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>    data_tibble <span class="ot">&lt;-</span> data_tibble <span class="sc">|&gt;</span></span>
-<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">JWAP =</span> <span class="fu">as.numeric</span>(JWAP))</span>
-<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>    <span class="co"># make new column for JWAP time values of type Period</span></span>
-<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>    data_tibble[<span class="st">'JWAP_time'</span>] <span class="ot">&lt;-</span> <span class="fu">hm</span>(<span class="st">"0, 0"</span>)</span>
-<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>    <span class="co"># fill in values for JWAP_time column</span></span>
-<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span>(i <span class="cf">in</span> <span class="fu">seq_along</span>(data_tibble<span class="sc">$</span>JWAP)){</span>
-<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>      </span>
-<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span>(<span class="sc">!</span>data_tibble<span class="sc">$</span>JWAP[i]<span class="sc">==</span> <span class="dv">0</span>){</span>
-<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>        </span>
-<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>        val <span class="ot">&lt;-</span> data_tibble<span class="sc">$</span>JWAP[i]</span>
-<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>        val <span class="ot">&lt;-</span> JWAP_values[val<span class="sc">+</span><span class="dv">1</span>]</span>
-<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>        time1 <span class="ot">&lt;-</span> lubridate<span class="sc">::</span><span class="fu">hm</span>(<span class="fu">substring</span>(val, <span class="dv">1</span>, <span class="fu">regexpr</span>(<span class="st">'to'</span>, val,)<span class="sc">-</span><span class="dv">2</span>))</span>
-<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>        time2 <span class="ot">&lt;-</span> lubridate<span class="sc">::</span><span class="fu">hm</span>(<span class="fu">substring</span>(val, <span class="fu">regexpr</span>(<span class="st">'to'</span>, val,)<span class="sc">+</span><span class="dv">3</span>))</span>
-<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>        </span>
-<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>        diff <span class="ot">&lt;-</span> time2<span class="sc">-</span>time1</span>
-<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span>(diff<span class="sc">@</span>hour<span class="sc">&gt;</span><span class="dv">0</span> <span class="sc">|</span> <span class="fu">second</span>(diff)<span class="sc">&gt;</span><span class="dv">0</span>){<span class="fu">stop</span>(<span class="st">"can't handle time diff"</span>)}</span>
-<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>        </span>
-<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a>        min_offset <span class="ot">&lt;-</span> <span class="fu">floor</span>(diff<span class="sc">@</span>minute<span class="sc">/</span><span class="dv">2</span>)</span>
-<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a>        sec_offset <span class="ot">&lt;-</span> (diff<span class="sc">@</span>minute<span class="sc">/</span><span class="dv">2</span> <span class="sc">-</span> <span class="fu">floor</span>(diff<span class="sc">@</span>minute<span class="sc">/</span><span class="dv">2</span>))<span class="sc">*</span><span class="dv">60</span></span>
-<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a>        </span>
-<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a>        time <span class="ot">&lt;-</span> time1 <span class="sc">+</span> lubridate<span class="sc">::</span><span class="fu">hms</span>(<span class="fu">paste</span>(<span class="st">"0"</span>, min_offset, sec_offset, <span class="at">sep=</span><span class="st">", "</span>))</span>
-<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a>        </span>
-<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span>(<span class="fu">grepl</span>(<span class="st">'p.m.'</span>, val) <span class="sc">&amp;</span> (time<span class="sc">@</span>hour<span class="sc">!=</span><span class="dv">12</span>)){</span>
-<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a>          time <span class="ot">&lt;-</span> time <span class="sc">+</span> lubridate<span class="sc">::</span><span class="fu">hms</span>(<span class="st">'12, 0, 0'</span>)</span>
-<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a>        }</span>
-<span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a>        </span>
-<span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a>        data_tibble<span class="sc">$</span>JWAP_time[i] <span class="ot">&lt;-</span> time</span>
-<span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a>      }</span>
-<span id="cb3-50"><a href="#cb3-50" aria-hidden="true" tabindex="-1"></a>    }</span>
-<span id="cb3-51"><a href="#cb3-51" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb3-52"><a href="#cb3-52" aria-hidden="true" tabindex="-1"></a>    data_tibble <span class="ot">&lt;-</span> data_tibble <span class="sc">|&gt;</span></span>
-<span id="cb3-53"><a href="#cb3-53" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(<span class="sc">!</span><span class="fu">c</span>(JWAP)) <span class="sc">|&gt;</span></span>
-<span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a>      <span class="fu">rename</span>(<span class="at">JWAP=</span>JWAP_time)</span>
-<span id="cb3-55"><a href="#cb3-55" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb3-57"><a href="#cb3-57" aria-hidden="true" tabindex="-1"></a>  <span class="co"># process JWDP time variable</span></span>
-<span id="cb3-58"><a href="#cb3-58" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="st">'JWDP'</span> <span class="sc">%in%</span> numer_vars){</span>
-<span id="cb3-59"><a href="#cb3-59" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb3-60"><a href="#cb3-60" aria-hidden="true" tabindex="-1"></a>    <span class="co">#lines from class discussion:</span></span>
-<span id="cb3-61"><a href="#cb3-61" aria-hidden="true" tabindex="-1"></a>    <span class="co">#get the JWDP info</span></span>
-<span id="cb3-62"><a href="#cb3-62" aria-hidden="true" tabindex="-1"></a>    temp <span class="ot">&lt;-</span> httr<span class="sc">::</span><span class="fu">GET</span>(<span class="st">"https://api.census.gov/data/2022/acs/acs1/pums/variables/JWDP.json"</span>)</span>
-<span id="cb3-63"><a href="#cb3-63" aria-hidden="true" tabindex="-1"></a>    <span class="co">#turn it into a list</span></span>
-<span id="cb3-64"><a href="#cb3-64" aria-hidden="true" tabindex="-1"></a>    temp_list <span class="ot">&lt;-</span> temp<span class="sc">$</span>content <span class="sc">|&gt;</span> <span class="fu">rawToChar</span>() <span class="sc">|&gt;</span>jsonlite<span class="sc">::</span><span class="fu">fromJSON</span>()</span>
-<span id="cb3-65"><a href="#cb3-65" aria-hidden="true" tabindex="-1"></a>    <span class="co">#grab just the names of JWDP and their values</span></span>
-<span id="cb3-66"><a href="#cb3-66" aria-hidden="true" tabindex="-1"></a>    JWDP <span class="ot">&lt;-</span> temp_list<span class="sc">$</span>values<span class="sc">$</span>item</span>
-<span id="cb3-67"><a href="#cb3-67" aria-hidden="true" tabindex="-1"></a>    <span class="co">#reorder just so it is clearer</span></span>
-<span id="cb3-68"><a href="#cb3-68" aria-hidden="true" tabindex="-1"></a>    JWDP_values <span class="ot">&lt;-</span> JWDP[<span class="fu">sort</span>(<span class="fu">names</span>(JWDP))]</span>
-<span id="cb3-69"><a href="#cb3-69" aria-hidden="true" tabindex="-1"></a>    JWDP_values <span class="ot">&lt;-</span> <span class="fu">as_tibble</span>(JWDP_values)</span>
-<span id="cb3-70"><a href="#cb3-70" aria-hidden="true" tabindex="-1"></a>    <span class="fu">colnames</span>(JWDP_values) <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">names</span>(JWDP_values))</span>
-<span id="cb3-71"><a href="#cb3-71" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb3-72"><a href="#cb3-72" aria-hidden="true" tabindex="-1"></a>    <span class="co"># convert JWDP to numeric</span></span>
-<span id="cb3-73"><a href="#cb3-73" aria-hidden="true" tabindex="-1"></a>    data_tibble <span class="ot">&lt;-</span> data_tibble <span class="sc">|&gt;</span></span>
-<span id="cb3-74"><a href="#cb3-74" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">JWDP =</span> <span class="fu">as.numeric</span>(JWDP))</span>
-<span id="cb3-75"><a href="#cb3-75" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb3-76"><a href="#cb3-76" aria-hidden="true" tabindex="-1"></a>    <span class="co"># make new column for JWDP time values of type Period</span></span>
-<span id="cb3-77"><a href="#cb3-77" aria-hidden="true" tabindex="-1"></a>    data_tibble[<span class="st">'JWDP_time'</span>] <span class="ot">&lt;-</span> <span class="fu">hm</span>(<span class="st">"0, 0"</span>)</span>
-<span id="cb3-78"><a href="#cb3-78" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb3-79"><a href="#cb3-79" aria-hidden="true" tabindex="-1"></a>    <span class="co"># fill in values for JWDP_time column</span></span>
-<span id="cb3-80"><a href="#cb3-80" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span>(i <span class="cf">in</span> <span class="fu">seq_along</span>(data_tibble<span class="sc">$</span>JWDP)){</span>
-<span id="cb3-81"><a href="#cb3-81" aria-hidden="true" tabindex="-1"></a>      </span>
-<span id="cb3-82"><a href="#cb3-82" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span>(<span class="sc">!</span>data_tibble<span class="sc">$</span>JWDP[i]<span class="sc">==</span> <span class="dv">0</span>){</span>
-<span id="cb3-83"><a href="#cb3-83" aria-hidden="true" tabindex="-1"></a>        </span>
-<span id="cb3-84"><a href="#cb3-84" aria-hidden="true" tabindex="-1"></a>        val <span class="ot">&lt;-</span> data_tibble<span class="sc">$</span>JWDP[i]</span>
-<span id="cb3-85"><a href="#cb3-85" aria-hidden="true" tabindex="-1"></a>        val <span class="ot">&lt;-</span> JWDP_values[val<span class="sc">+</span><span class="dv">1</span>]</span>
-<span id="cb3-86"><a href="#cb3-86" aria-hidden="true" tabindex="-1"></a>        </span>
-<span id="cb3-87"><a href="#cb3-87" aria-hidden="true" tabindex="-1"></a>        time1 <span class="ot">&lt;-</span> lubridate<span class="sc">::</span><span class="fu">hm</span>(<span class="fu">substring</span>(val, <span class="dv">1</span>, <span class="fu">regexpr</span>(<span class="st">'to'</span>, val,)<span class="sc">-</span><span class="dv">2</span>))</span>
-<span id="cb3-88"><a href="#cb3-88" aria-hidden="true" tabindex="-1"></a>        time2 <span class="ot">&lt;-</span> lubridate<span class="sc">::</span><span class="fu">hm</span>(<span class="fu">substring</span>(val, <span class="fu">regexpr</span>(<span class="st">'to'</span>, val,)<span class="sc">+</span><span class="dv">3</span>))</span>
-<span id="cb3-89"><a href="#cb3-89" aria-hidden="true" tabindex="-1"></a>        </span>
-<span id="cb3-90"><a href="#cb3-90" aria-hidden="true" tabindex="-1"></a>        diff <span class="ot">&lt;-</span> time2<span class="sc">-</span>time1</span>
-<span id="cb3-91"><a href="#cb3-91" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span>(diff<span class="sc">@</span>hour<span class="sc">&gt;</span><span class="dv">0</span> <span class="sc">|</span> <span class="fu">second</span>(diff)<span class="sc">&gt;</span><span class="dv">0</span>){<span class="fu">stop</span>(<span class="st">"can't handle time diff"</span>)}</span>
-<span id="cb3-92"><a href="#cb3-92" aria-hidden="true" tabindex="-1"></a>        </span>
-<span id="cb3-93"><a href="#cb3-93" aria-hidden="true" tabindex="-1"></a>        min_offset <span class="ot">&lt;-</span> <span class="fu">floor</span>(diff<span class="sc">@</span>minute<span class="sc">/</span><span class="dv">2</span>)</span>
-<span id="cb3-94"><a href="#cb3-94" aria-hidden="true" tabindex="-1"></a>        sec_offset <span class="ot">&lt;-</span> (diff<span class="sc">@</span>minute<span class="sc">/</span><span class="dv">2</span> <span class="sc">-</span> <span class="fu">floor</span>(diff<span class="sc">@</span>minute<span class="sc">/</span><span class="dv">2</span>))<span class="sc">*</span><span class="dv">60</span></span>
-<span id="cb3-95"><a href="#cb3-95" aria-hidden="true" tabindex="-1"></a>        </span>
-<span id="cb3-96"><a href="#cb3-96" aria-hidden="true" tabindex="-1"></a>        time <span class="ot">&lt;-</span> time1 <span class="sc">+</span> lubridate<span class="sc">::</span><span class="fu">hms</span>(<span class="fu">paste</span>(<span class="st">"0"</span>, min_offset, sec_offset, <span class="at">sep=</span><span class="st">", "</span>))</span>
-<span id="cb3-97"><a href="#cb3-97" aria-hidden="true" tabindex="-1"></a>        </span>
-<span id="cb3-98"><a href="#cb3-98" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span>(<span class="fu">grepl</span>(<span class="st">'p.m.'</span>, val) <span class="sc">&amp;</span> (time<span class="sc">@</span>hour<span class="sc">!=</span><span class="dv">12</span>)){</span>
-<span id="cb3-99"><a href="#cb3-99" aria-hidden="true" tabindex="-1"></a>          time <span class="ot">&lt;-</span> time <span class="sc">+</span> lubridate<span class="sc">::</span><span class="fu">hms</span>(<span class="st">'12, 0, 0'</span>)</span>
-<span id="cb3-100"><a href="#cb3-100" aria-hidden="true" tabindex="-1"></a>        }</span>
-<span id="cb3-101"><a href="#cb3-101" aria-hidden="true" tabindex="-1"></a>        </span>
-<span id="cb3-102"><a href="#cb3-102" aria-hidden="true" tabindex="-1"></a>        data_tibble<span class="sc">$</span>JWDP_time[i] <span class="ot">&lt;-</span> time</span>
-<span id="cb3-103"><a href="#cb3-103" aria-hidden="true" tabindex="-1"></a>      }</span>
-<span id="cb3-104"><a href="#cb3-104" aria-hidden="true" tabindex="-1"></a>    }</span>
-<span id="cb3-105"><a href="#cb3-105" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb3-106"><a href="#cb3-106" aria-hidden="true" tabindex="-1"></a>    data_tibble <span class="ot">&lt;-</span> data_tibble <span class="sc">|&gt;</span></span>
-<span id="cb3-107"><a href="#cb3-107" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(<span class="sc">!</span><span class="fu">c</span>(JWDP)) <span class="sc">|&gt;</span></span>
-<span id="cb3-108"><a href="#cb3-108" aria-hidden="true" tabindex="-1"></a>      <span class="fu">rename</span>(<span class="at">JWDP=</span>JWDP_time)</span>
-<span id="cb3-109"><a href="#cb3-109" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb3-110"><a href="#cb3-110" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb3-111"><a href="#cb3-111" aria-hidden="true" tabindex="-1"></a>  <span class="co"># map the received values of categorical variables to their meaningful values and convert to factors</span></span>
-<span id="cb3-112"><a href="#cb3-112" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="st">"FER"</span> <span class="sc">%in%</span> cat_vars){</span>
-<span id="cb3-113"><a href="#cb3-113" aria-hidden="true" tabindex="-1"></a>    data_tibble <span class="ot">&lt;-</span> data_tibble <span class="sc">|&gt;</span></span>
-<span id="cb3-114"><a href="#cb3-114" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(data_tibble, <span class="at">Recent_Birth=</span><span class="fu">case_match</span>(FER, <span class="st">"0"</span><span class="sc">~</span><span class="st">"N/A"</span>, <span class="st">"1"</span><span class="sc">~</span><span class="st">"Yes"</span>, <span class="st">"2"</span><span class="sc">~</span><span class="st">"No"</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb3-115"><a href="#cb3-115" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">Recent_Birth=</span><span class="fu">as.factor</span>(Recent_Birth)) <span class="sc">|&gt;</span></span>
-<span id="cb3-116"><a href="#cb3-116" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(<span class="sc">!</span><span class="fu">c</span>(<span class="st">"FER"</span>))</span>
-<span id="cb3-117"><a href="#cb3-117" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb3-118"><a href="#cb3-118" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb3-119"><a href="#cb3-119" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="st">"SEX"</span> <span class="sc">%in%</span> cat_vars){</span>
-<span id="cb3-120"><a href="#cb3-120" aria-hidden="true" tabindex="-1"></a>    data_tibble <span class="ot">&lt;-</span> data_tibble <span class="sc">|&gt;</span></span>
-<span id="cb3-121"><a href="#cb3-121" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(data_tibble, <span class="at">Sex=</span><span class="fu">case_match</span>(SEX, <span class="st">"1"</span><span class="sc">~</span><span class="st">"Male"</span>, <span class="st">"2"</span><span class="sc">~</span><span class="st">"Female"</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb3-122"><a href="#cb3-122" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">Sex=</span><span class="fu">as.factor</span>(Sex)) <span class="sc">|&gt;</span></span>
-<span id="cb3-123"><a href="#cb3-123" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(<span class="sc">!</span><span class="fu">c</span>(<span class="st">"SEX"</span>))</span>
-<span id="cb3-124"><a href="#cb3-124" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb3-125"><a href="#cb3-125" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb3-126"><a href="#cb3-126" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="st">"HHL"</span> <span class="sc">%in%</span> cat_vars){</span>
-<span id="cb3-127"><a href="#cb3-127" aria-hidden="true" tabindex="-1"></a>    data_tibble <span class="ot">&lt;-</span> data_tibble <span class="sc">|&gt;</span></span>
-<span id="cb3-128"><a href="#cb3-128" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(data_tibble, <span class="at">Language=</span><span class="fu">case_match</span>(HHL, <span class="st">"0"</span><span class="sc">~</span><span class="st">"N/A"</span>, <span class="st">"1"</span><span class="sc">~</span><span class="st">"English Only"</span>, <span class="st">"2"</span><span class="sc">~</span><span class="st">"Spanish"</span>, <span class="st">"3"</span><span class="sc">~</span><span class="st">"Other Indo-European languages"</span>, <span class="st">"4"</span><span class="sc">~</span><span class="st">"Asian and Pacific Island languages"</span>, <span class="st">"5"</span><span class="sc">~</span><span class="st">"Other Language"</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb3-129"><a href="#cb3-129" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">Language=</span><span class="fu">as.factor</span>(Language)) <span class="sc">|&gt;</span></span>
-<span id="cb3-130"><a href="#cb3-130" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(<span class="sc">!</span><span class="fu">c</span>(<span class="st">"HHL"</span>))</span>
-<span id="cb3-131"><a href="#cb3-131" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb3-132"><a href="#cb3-132" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb3-133"><a href="#cb3-133" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="st">"HISPEED"</span> <span class="sc">%in%</span> cat_vars){</span>
-<span id="cb3-134"><a href="#cb3-134" aria-hidden="true" tabindex="-1"></a>    data_tibble <span class="ot">&lt;-</span> data_tibble <span class="sc">|&gt;</span></span>
-<span id="cb3-135"><a href="#cb3-135" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(data_tibble, <span class="at">Highspeed_Internet=</span><span class="fu">case_match</span>(HISPEED, <span class="st">"0"</span><span class="sc">~</span><span class="st">"N/A"</span>, <span class="st">"1"</span><span class="sc">~</span><span class="st">"Yes"</span>, <span class="st">"2"</span><span class="sc">~</span><span class="st">"No"</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb3-136"><a href="#cb3-136" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">Highspeed_Internet=</span><span class="fu">as.factor</span>(Highspeed_Internet)) <span class="sc">|&gt;</span></span>
-<span id="cb3-137"><a href="#cb3-137" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(<span class="sc">!</span><span class="fu">c</span>(<span class="st">"HISPEED"</span>))</span>
-<span id="cb3-138"><a href="#cb3-138" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb3-139"><a href="#cb3-139" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb3-140"><a href="#cb3-140" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="st">"JWTRNS"</span> <span class="sc">%in%</span> cat_vars){</span>
-<span id="cb3-141"><a href="#cb3-141" aria-hidden="true" tabindex="-1"></a>    data_tibble <span class="ot">&lt;-</span> data_tibble <span class="sc">|&gt;</span></span>
-<span id="cb3-142"><a href="#cb3-142" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(data_tibble, <span class="at">Transportation_to_Work=</span><span class="fu">case_match</span>(JWTRNS, <span class="st">"0"</span><span class="sc">~</span><span class="st">"N/A"</span>, <span class="st">"1"</span><span class="sc">~</span><span class="st">"Car, truck, or van"</span>, <span class="st">"2"</span><span class="sc">~</span><span class="st">"Bus"</span>, <span class="st">"3"</span><span class="sc">~</span><span class="st">"Subway or elevated rail"</span>, <span class="st">"4"</span><span class="sc">~</span><span class="st">"Long-distance train or commuter rail"</span>, <span class="st">"5"</span><span class="sc">~</span><span class="st">"Light rail, streetcar, or trolley"</span>, <span class="st">"6"</span><span class="sc">~</span><span class="st">"Ferryboat"</span>, <span class="st">"7"</span><span class="sc">~</span><span class="st">"Taxicab"</span>, <span class="st">"8"</span><span class="sc">~</span><span class="st">"Motorcycle"</span>, <span class="st">"9"</span><span class="sc">~</span><span class="st">"Bicycle"</span>, <span class="st">"10"</span><span class="sc">~</span><span class="st">"Walked"</span>, <span class="st">"11"</span><span class="sc">~</span><span class="st">"Worked from home"</span>, <span class="st">"12"</span><span class="sc">~</span><span class="st">"Other method"</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb3-143"><a href="#cb3-143" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">Transportation_to_Work=</span><span class="fu">as.factor</span>(Transportation_to_Work)) <span class="sc">|&gt;</span></span>
-<span id="cb3-144"><a href="#cb3-144" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(<span class="sc">!</span><span class="fu">c</span>(<span class="st">"JWTRNS"</span>))</span>
-<span id="cb3-145"><a href="#cb3-145" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb3-146"><a href="#cb3-146" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb3-147"><a href="#cb3-147" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="st">"SCH"</span> <span class="sc">%in%</span> cat_vars){</span>
-<span id="cb3-148"><a href="#cb3-148" aria-hidden="true" tabindex="-1"></a>    data_tibble <span class="ot">&lt;-</span> data_tibble <span class="sc">|&gt;</span></span>
-<span id="cb3-149"><a href="#cb3-149" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(data_tibble, <span class="at">School_Enrollment=</span><span class="fu">case_match</span>(SCH, <span class="st">"0"</span><span class="sc">~</span><span class="st">"N/A"</span>, <span class="st">"1"</span><span class="sc">~</span><span class="st">"No"</span>, <span class="st">"2"</span><span class="sc">~</span><span class="st">"Public"</span>, <span class="st">"3"</span><span class="sc">~</span><span class="st">"private"</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb3-150"><a href="#cb3-150" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">School_Enrollment=</span><span class="fu">as.factor</span>(School_Enrollment)) <span class="sc">|&gt;</span></span>
-<span id="cb3-151"><a href="#cb3-151" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(<span class="sc">!</span><span class="fu">c</span>(<span class="st">"SCH"</span>))</span>
-<span id="cb3-152"><a href="#cb3-152" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb3-153"><a href="#cb3-153" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb3-154"><a href="#cb3-154" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="st">"SCHL"</span> <span class="sc">%in%</span> cat_vars){</span>
-<span id="cb3-155"><a href="#cb3-155" aria-hidden="true" tabindex="-1"></a>    data_tibble <span class="ot">&lt;-</span> data_tibble <span class="sc">|&gt;</span></span>
-<span id="cb3-156"><a href="#cb3-156" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(data_tibble, <span class="at">Educational_Attainment=</span><span class="fu">case_match</span>(SCHL, <span class="st">"0"</span><span class="sc">~</span><span class="st">"N/A"</span>, <span class="st">"1"</span><span class="sc">~</span><span class="st">"None"</span>, <span class="st">"2"</span><span class="sc">~</span><span class="st">"Nursery/Preschool"</span>, <span class="st">"3"</span><span class="sc">~</span><span class="st">"Kindergarten"</span>, <span class="st">"4"</span><span class="sc">~</span><span class="st">"Grade 1"</span>, <span class="st">"5"</span><span class="sc">~</span><span class="st">"Grade 2"</span>, <span class="st">"6"</span><span class="sc">~</span><span class="st">"Grade 3"</span>, <span class="st">"7"</span><span class="sc">~</span><span class="st">"Grade 4"</span>, <span class="st">"8"</span><span class="sc">~</span><span class="st">"Grade 5"</span>, <span class="st">"9"</span><span class="sc">~</span><span class="st">"Grade 6"</span>, <span class="st">"10"</span><span class="sc">~</span><span class="st">"Grade 7"</span>, <span class="st">"11"</span><span class="sc">~</span><span class="st">"Grade 8"</span>, <span class="st">"12"</span><span class="sc">~</span><span class="st">"Grade 9"</span>, <span class="st">"13"</span><span class="sc">~</span><span class="st">"Grade 10"</span>, <span class="st">"14"</span><span class="sc">~</span><span class="st">"Grade 11"</span>, <span class="st">"15"</span><span class="sc">~</span><span class="st">"Grade 12, no diploma"</span>, <span class="st">"16"</span><span class="sc">~</span><span class="st">"HS Diploma"</span>, <span class="st">"17"</span><span class="sc">~</span><span class="st">"GED or alt cred"</span>, <span class="st">"18"</span><span class="sc">~</span><span class="st">"Some college (&lt;1 year)"</span>, <span class="st">"19"</span><span class="sc">~</span><span class="st">"Some college (&gt;1 year), no degree"</span>, <span class="st">"20"</span><span class="sc">~</span><span class="st">"Associate's degree"</span>, <span class="st">"21"</span><span class="sc">~</span><span class="st">"Bachelor's degree"</span>, <span class="st">"22"</span><span class="sc">~</span><span class="st">"Master's degree"</span>, <span class="st">"23"</span><span class="sc">~</span><span class="st">"Professional degree beyond a bachelor's degree"</span>, <span class="st">"24"</span><span class="sc">~</span><span class="st">"Doctorate degree"</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb3-157"><a href="#cb3-157" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">Educational_Attainment=</span><span class="fu">as.factor</span>(Educational_Attainment)) <span class="sc">|&gt;</span></span>
-<span id="cb3-158"><a href="#cb3-158" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(<span class="sc">!</span><span class="fu">c</span>(<span class="st">"SCHL"</span>))</span>
-<span id="cb3-159"><a href="#cb3-159" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb3-160"><a href="#cb3-160" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb3-161"><a href="#cb3-161" aria-hidden="true" tabindex="-1"></a>  <span class="co"># get rid of renamed columns, convert numeric vars to numeric type, categorical vars to factors</span></span>
-<span id="cb3-162"><a href="#cb3-162" aria-hidden="true" tabindex="-1"></a>  data_tibble <span class="ot">&lt;-</span> data_tibble <span class="sc">|&gt;</span></span>
-<span id="cb3-163"><a href="#cb3-163" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="fu">across</span>(numer_vars[numer_vars <span class="sc">!=</span><span class="st">"JWAP"</span> <span class="sc">&amp;</span> numer_vars<span class="sc">!=</span><span class="st">"JWDP"</span>], as.numeric)) <span class="sc">|&gt;</span></span>
-<span id="cb3-164"><a href="#cb3-164" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rename</span>(<span class="fu">any_of</span>(<span class="fu">c</span>(<span class="at">Age=</span><span class="st">"AGEP"</span>, <span class="at">Gas_Bill_Monthly=</span><span class="st">"GASP"</span>, <span class="at">Rent_Percent_of_Income=</span><span class="st">"GRPIP"</span>, <span class="at">Arrive_at_Work=</span><span class="st">"JWAP"</span>, <span class="at">Depart_for_Work=</span><span class="st">"JWDP"</span>, <span class="at">Work_Travel_Time=</span><span class="st">"JWMNP"</span>, <span class="at">PUMS_Weight=</span><span class="st">"PWGTP"</span>, <span class="at">State=</span><span class="st">"state"</span>)))</span>
-<span id="cb3-165"><a href="#cb3-165" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb3-166"><a href="#cb3-166" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(data_tibble)</span>
-<span id="cb3-167"><a href="#cb3-167" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>format_num_and_cat_vars <span class="ot">&lt;-</span> <span class="cf">function</span>(data_tibble, numer_vars, cat_vars){</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># process JWAP time variable</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="st">'JWAP'</span> <span class="sc">%in%</span> numer_vars){</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">#lines from class discussion:</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">#get the JWAP info</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    temp <span class="ot">&lt;-</span> httr<span class="sc">::</span><span class="fu">GET</span>(<span class="st">"https://api.census.gov/data/2022/acs/acs1/pums/variables/JWAP.json"</span>)</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">#turn it into a list</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    temp_list <span class="ot">&lt;-</span> temp<span class="sc">$</span>content <span class="sc">|&gt;</span> <span class="fu">rawToChar</span>() <span class="sc">|&gt;</span>jsonlite<span class="sc">::</span><span class="fu">fromJSON</span>()</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">#grab just the names of JWAP and their values</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    JWAP <span class="ot">&lt;-</span> temp_list<span class="sc">$</span>values<span class="sc">$</span>item</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    <span class="co">#reorder just so it is clearer</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    JWAP_values <span class="ot">&lt;-</span> JWAP[<span class="fu">sort</span>(<span class="fu">names</span>(JWAP))]</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>    JWAP_values <span class="ot">&lt;-</span> <span class="fu">as_tibble</span>(JWAP_values)</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">colnames</span>(JWAP_values) <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">names</span>(JWAP_values))</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>    <span class="co"># convert JWAP to numeric</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>    data_tibble <span class="ot">&lt;-</span> data_tibble <span class="sc">|&gt;</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">JWAP =</span> <span class="fu">as.numeric</span>(JWAP))</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>    <span class="co"># make new column for JWAP time values of type Period</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>    data_tibble[<span class="st">'JWAP_time'</span>] <span class="ot">&lt;-</span> <span class="fu">hm</span>(<span class="st">"0, 0"</span>)</span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>    <span class="co"># fill in values for JWAP_time column</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span>(i <span class="cf">in</span> <span class="fu">seq_along</span>(data_tibble<span class="sc">$</span>JWAP)){</span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>      </span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span>(<span class="sc">!</span>data_tibble<span class="sc">$</span>JWAP[i]<span class="sc">==</span> <span class="dv">0</span>){</span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>        val <span class="ot">&lt;-</span> data_tibble<span class="sc">$</span>JWAP[i]</span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>        val <span class="ot">&lt;-</span> JWAP_values[val<span class="sc">+</span><span class="dv">1</span>]</span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>        time1 <span class="ot">&lt;-</span> lubridate<span class="sc">::</span><span class="fu">hm</span>(<span class="fu">substring</span>(val, <span class="dv">1</span>, <span class="fu">regexpr</span>(<span class="st">'to'</span>, val,)<span class="sc">-</span><span class="dv">2</span>))</span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>        time2 <span class="ot">&lt;-</span> lubridate<span class="sc">::</span><span class="fu">hm</span>(<span class="fu">substring</span>(val, <span class="fu">regexpr</span>(<span class="st">'to'</span>, val,)<span class="sc">+</span><span class="dv">3</span>))</span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Only time differentials in the minute attribute are handled here</span></span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>        diff <span class="ot">&lt;-</span> time2<span class="sc">-</span>time1</span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span>(diff<span class="sc">@</span>hour<span class="sc">&gt;</span><span class="dv">0</span> <span class="sc">|</span> <span class="fu">second</span>(diff)<span class="sc">&gt;</span><span class="dv">0</span>){<span class="fu">stop</span>(<span class="st">"can't handle time diff"</span>)}</span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>        min_offset <span class="ot">&lt;-</span> <span class="fu">floor</span>(diff<span class="sc">@</span>minute<span class="sc">/</span><span class="dv">2</span>)</span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>        sec_offset <span class="ot">&lt;-</span> (diff<span class="sc">@</span>minute<span class="sc">/</span><span class="dv">2</span> <span class="sc">-</span> <span class="fu">floor</span>(diff<span class="sc">@</span>minute<span class="sc">/</span><span class="dv">2</span>))<span class="sc">*</span><span class="dv">60</span></span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a>        time <span class="ot">&lt;-</span> time1 <span class="sc">+</span> lubridate<span class="sc">::</span><span class="fu">hms</span>(<span class="fu">paste</span>(<span class="st">"0"</span>, min_offset, sec_offset, <span class="at">sep=</span><span class="st">", "</span>))</span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>        <span class="co"># add '12' to the hour if the time is p.m.</span></span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span>(<span class="fu">grepl</span>(<span class="st">'p.m.'</span>, val) <span class="sc">&amp;</span> (time<span class="sc">@</span>hour<span class="sc">!=</span><span class="dv">12</span>)){</span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a>          time <span class="ot">&lt;-</span> time <span class="sc">+</span> lubridate<span class="sc">::</span><span class="fu">hms</span>(<span class="st">'12, 0, 0'</span>)</span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a>        data_tibble<span class="sc">$</span>JWAP_time[i] <span class="ot">&lt;-</span> time</span>
+<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a>      }</span>
+<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a>    <span class="co"># replace JWAP column with JWAP_time</span></span>
+<span id="cb4-55"><a href="#cb4-55" aria-hidden="true" tabindex="-1"></a>    data_tibble <span class="ot">&lt;-</span> data_tibble <span class="sc">|&gt;</span></span>
+<span id="cb4-56"><a href="#cb4-56" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(<span class="sc">!</span><span class="fu">c</span>(JWAP)) <span class="sc">|&gt;</span></span>
+<span id="cb4-57"><a href="#cb4-57" aria-hidden="true" tabindex="-1"></a>      <span class="fu">rename</span>(<span class="at">JWAP=</span>JWAP_time)</span>
+<span id="cb4-58"><a href="#cb4-58" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-59"><a href="#cb4-59" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-60"><a href="#cb4-60" aria-hidden="true" tabindex="-1"></a>  <span class="co"># process JWDP time variable</span></span>
+<span id="cb4-61"><a href="#cb4-61" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="st">'JWDP'</span> <span class="sc">%in%</span> numer_vars){</span>
+<span id="cb4-62"><a href="#cb4-62" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-63"><a href="#cb4-63" aria-hidden="true" tabindex="-1"></a>    <span class="co">#lines from class discussion:</span></span>
+<span id="cb4-64"><a href="#cb4-64" aria-hidden="true" tabindex="-1"></a>    <span class="co">#get the JWDP info</span></span>
+<span id="cb4-65"><a href="#cb4-65" aria-hidden="true" tabindex="-1"></a>    temp <span class="ot">&lt;-</span> httr<span class="sc">::</span><span class="fu">GET</span>(<span class="st">"https://api.census.gov/data/2022/acs/acs1/pums/variables/JWDP.json"</span>)</span>
+<span id="cb4-66"><a href="#cb4-66" aria-hidden="true" tabindex="-1"></a>    <span class="co">#turn it into a list</span></span>
+<span id="cb4-67"><a href="#cb4-67" aria-hidden="true" tabindex="-1"></a>    temp_list <span class="ot">&lt;-</span> temp<span class="sc">$</span>content <span class="sc">|&gt;</span> <span class="fu">rawToChar</span>() <span class="sc">|&gt;</span>jsonlite<span class="sc">::</span><span class="fu">fromJSON</span>()</span>
+<span id="cb4-68"><a href="#cb4-68" aria-hidden="true" tabindex="-1"></a>    <span class="co">#grab just the names of JWDP and their values</span></span>
+<span id="cb4-69"><a href="#cb4-69" aria-hidden="true" tabindex="-1"></a>    JWDP <span class="ot">&lt;-</span> temp_list<span class="sc">$</span>values<span class="sc">$</span>item</span>
+<span id="cb4-70"><a href="#cb4-70" aria-hidden="true" tabindex="-1"></a>    <span class="co">#reorder just so it is clearer</span></span>
+<span id="cb4-71"><a href="#cb4-71" aria-hidden="true" tabindex="-1"></a>    JWDP_values <span class="ot">&lt;-</span> JWDP[<span class="fu">sort</span>(<span class="fu">names</span>(JWDP))]</span>
+<span id="cb4-72"><a href="#cb4-72" aria-hidden="true" tabindex="-1"></a>    JWDP_values <span class="ot">&lt;-</span> <span class="fu">as_tibble</span>(JWDP_values)</span>
+<span id="cb4-73"><a href="#cb4-73" aria-hidden="true" tabindex="-1"></a>    <span class="fu">colnames</span>(JWDP_values) <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">names</span>(JWDP_values))</span>
+<span id="cb4-74"><a href="#cb4-74" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-75"><a href="#cb4-75" aria-hidden="true" tabindex="-1"></a>    <span class="co"># convert JWDP to numeric</span></span>
+<span id="cb4-76"><a href="#cb4-76" aria-hidden="true" tabindex="-1"></a>    data_tibble <span class="ot">&lt;-</span> data_tibble <span class="sc">|&gt;</span></span>
+<span id="cb4-77"><a href="#cb4-77" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">JWDP =</span> <span class="fu">as.numeric</span>(JWDP))</span>
+<span id="cb4-78"><a href="#cb4-78" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-79"><a href="#cb4-79" aria-hidden="true" tabindex="-1"></a>    <span class="co"># make new column for JWDP time values of type Period</span></span>
+<span id="cb4-80"><a href="#cb4-80" aria-hidden="true" tabindex="-1"></a>    data_tibble[<span class="st">'JWDP_time'</span>] <span class="ot">&lt;-</span> <span class="fu">hm</span>(<span class="st">"0, 0"</span>)</span>
+<span id="cb4-81"><a href="#cb4-81" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-82"><a href="#cb4-82" aria-hidden="true" tabindex="-1"></a>    <span class="co"># fill in values for JWDP_time column</span></span>
+<span id="cb4-83"><a href="#cb4-83" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span>(i <span class="cf">in</span> <span class="fu">seq_along</span>(data_tibble<span class="sc">$</span>JWDP)){</span>
+<span id="cb4-84"><a href="#cb4-84" aria-hidden="true" tabindex="-1"></a>      </span>
+<span id="cb4-85"><a href="#cb4-85" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span>(<span class="sc">!</span>data_tibble<span class="sc">$</span>JWDP[i]<span class="sc">==</span> <span class="dv">0</span>){</span>
+<span id="cb4-86"><a href="#cb4-86" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb4-87"><a href="#cb4-87" aria-hidden="true" tabindex="-1"></a>        val <span class="ot">&lt;-</span> data_tibble<span class="sc">$</span>JWDP[i]</span>
+<span id="cb4-88"><a href="#cb4-88" aria-hidden="true" tabindex="-1"></a>        val <span class="ot">&lt;-</span> JWDP_values[val<span class="sc">+</span><span class="dv">1</span>]</span>
+<span id="cb4-89"><a href="#cb4-89" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb4-90"><a href="#cb4-90" aria-hidden="true" tabindex="-1"></a>        time1 <span class="ot">&lt;-</span> lubridate<span class="sc">::</span><span class="fu">hm</span>(<span class="fu">substring</span>(val, <span class="dv">1</span>, <span class="fu">regexpr</span>(<span class="st">'to'</span>, val,)<span class="sc">-</span><span class="dv">2</span>))</span>
+<span id="cb4-91"><a href="#cb4-91" aria-hidden="true" tabindex="-1"></a>        time2 <span class="ot">&lt;-</span> lubridate<span class="sc">::</span><span class="fu">hm</span>(<span class="fu">substring</span>(val, <span class="fu">regexpr</span>(<span class="st">'to'</span>, val,)<span class="sc">+</span><span class="dv">3</span>))</span>
+<span id="cb4-92"><a href="#cb4-92" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb4-93"><a href="#cb4-93" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Only time differentials in the minute attribute are handled here</span></span>
+<span id="cb4-94"><a href="#cb4-94" aria-hidden="true" tabindex="-1"></a>        diff <span class="ot">&lt;-</span> time2<span class="sc">-</span>time1</span>
+<span id="cb4-95"><a href="#cb4-95" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span>(diff<span class="sc">@</span>hour<span class="sc">&gt;</span><span class="dv">0</span> <span class="sc">|</span> <span class="fu">second</span>(diff)<span class="sc">&gt;</span><span class="dv">0</span>){<span class="fu">stop</span>(<span class="st">"can't handle time diff"</span>)}</span>
+<span id="cb4-96"><a href="#cb4-96" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb4-97"><a href="#cb4-97" aria-hidden="true" tabindex="-1"></a>        min_offset <span class="ot">&lt;-</span> <span class="fu">floor</span>(diff<span class="sc">@</span>minute<span class="sc">/</span><span class="dv">2</span>)</span>
+<span id="cb4-98"><a href="#cb4-98" aria-hidden="true" tabindex="-1"></a>        sec_offset <span class="ot">&lt;-</span> (diff<span class="sc">@</span>minute<span class="sc">/</span><span class="dv">2</span> <span class="sc">-</span> <span class="fu">floor</span>(diff<span class="sc">@</span>minute<span class="sc">/</span><span class="dv">2</span>))<span class="sc">*</span><span class="dv">60</span></span>
+<span id="cb4-99"><a href="#cb4-99" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb4-100"><a href="#cb4-100" aria-hidden="true" tabindex="-1"></a>        time <span class="ot">&lt;-</span> time1 <span class="sc">+</span> lubridate<span class="sc">::</span><span class="fu">hms</span>(<span class="fu">paste</span>(<span class="st">"0"</span>, min_offset, sec_offset, <span class="at">sep=</span><span class="st">", "</span>))</span>
+<span id="cb4-101"><a href="#cb4-101" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb4-102"><a href="#cb4-102" aria-hidden="true" tabindex="-1"></a>        <span class="co"># add '12' to the hour if the time is p.m.</span></span>
+<span id="cb4-103"><a href="#cb4-103" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span>(<span class="fu">grepl</span>(<span class="st">'p.m.'</span>, val) <span class="sc">&amp;</span> (time<span class="sc">@</span>hour<span class="sc">!=</span><span class="dv">12</span>)){</span>
+<span id="cb4-104"><a href="#cb4-104" aria-hidden="true" tabindex="-1"></a>          time <span class="ot">&lt;-</span> time <span class="sc">+</span> lubridate<span class="sc">::</span><span class="fu">hms</span>(<span class="st">'12, 0, 0'</span>)</span>
+<span id="cb4-105"><a href="#cb4-105" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb4-106"><a href="#cb4-106" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb4-107"><a href="#cb4-107" aria-hidden="true" tabindex="-1"></a>        data_tibble<span class="sc">$</span>JWDP_time[i] <span class="ot">&lt;-</span> time</span>
+<span id="cb4-108"><a href="#cb4-108" aria-hidden="true" tabindex="-1"></a>      }</span>
+<span id="cb4-109"><a href="#cb4-109" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb4-110"><a href="#cb4-110" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-111"><a href="#cb4-111" aria-hidden="true" tabindex="-1"></a>    <span class="co"># replace JWDP column with JWDP_time</span></span>
+<span id="cb4-112"><a href="#cb4-112" aria-hidden="true" tabindex="-1"></a>    data_tibble <span class="ot">&lt;-</span> data_tibble <span class="sc">|&gt;</span></span>
+<span id="cb4-113"><a href="#cb4-113" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(<span class="sc">!</span><span class="fu">c</span>(JWDP)) <span class="sc">|&gt;</span></span>
+<span id="cb4-114"><a href="#cb4-114" aria-hidden="true" tabindex="-1"></a>      <span class="fu">rename</span>(<span class="at">JWDP=</span>JWDP_time)</span>
+<span id="cb4-115"><a href="#cb4-115" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-116"><a href="#cb4-116" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-117"><a href="#cb4-117" aria-hidden="true" tabindex="-1"></a>  <span class="do">####################################################################################################</span></span>
+<span id="cb4-118"><a href="#cb4-118" aria-hidden="true" tabindex="-1"></a>  <span class="co"># map the received values of categorical variables to their meaningful values and convert to factors</span></span>
+<span id="cb4-119"><a href="#cb4-119" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="st">"FER"</span> <span class="sc">%in%</span> cat_vars){</span>
+<span id="cb4-120"><a href="#cb4-120" aria-hidden="true" tabindex="-1"></a>    data_tibble <span class="ot">&lt;-</span> data_tibble <span class="sc">|&gt;</span></span>
+<span id="cb4-121"><a href="#cb4-121" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(data_tibble, <span class="at">Recent_Birth=</span><span class="fu">case_match</span>(FER, <span class="st">"0"</span><span class="sc">~</span><span class="st">"N/A"</span>, <span class="st">"1"</span><span class="sc">~</span><span class="st">"Yes"</span>, <span class="st">"2"</span><span class="sc">~</span><span class="st">"No"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb4-122"><a href="#cb4-122" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">Recent_Birth=</span><span class="fu">as.factor</span>(Recent_Birth)) <span class="sc">|&gt;</span></span>
+<span id="cb4-123"><a href="#cb4-123" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(<span class="sc">!</span><span class="fu">c</span>(<span class="st">"FER"</span>))</span>
+<span id="cb4-124"><a href="#cb4-124" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-125"><a href="#cb4-125" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-126"><a href="#cb4-126" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="st">"SEX"</span> <span class="sc">%in%</span> cat_vars){</span>
+<span id="cb4-127"><a href="#cb4-127" aria-hidden="true" tabindex="-1"></a>    data_tibble <span class="ot">&lt;-</span> data_tibble <span class="sc">|&gt;</span></span>
+<span id="cb4-128"><a href="#cb4-128" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(data_tibble, <span class="at">Sex=</span><span class="fu">case_match</span>(SEX, <span class="st">"1"</span><span class="sc">~</span><span class="st">"Male"</span>, <span class="st">"2"</span><span class="sc">~</span><span class="st">"Female"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb4-129"><a href="#cb4-129" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">Sex=</span><span class="fu">as.factor</span>(Sex)) <span class="sc">|&gt;</span></span>
+<span id="cb4-130"><a href="#cb4-130" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(<span class="sc">!</span><span class="fu">c</span>(<span class="st">"SEX"</span>))</span>
+<span id="cb4-131"><a href="#cb4-131" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-132"><a href="#cb4-132" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-133"><a href="#cb4-133" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="st">"HHL"</span> <span class="sc">%in%</span> cat_vars){</span>
+<span id="cb4-134"><a href="#cb4-134" aria-hidden="true" tabindex="-1"></a>    data_tibble <span class="ot">&lt;-</span> data_tibble <span class="sc">|&gt;</span></span>
+<span id="cb4-135"><a href="#cb4-135" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(data_tibble, <span class="at">Language=</span><span class="fu">case_match</span>(HHL, <span class="st">"0"</span><span class="sc">~</span><span class="st">"N/A"</span>, <span class="st">"1"</span><span class="sc">~</span><span class="st">"English Only"</span>, <span class="st">"2"</span><span class="sc">~</span><span class="st">"Spanish"</span>, <span class="st">"3"</span><span class="sc">~</span><span class="st">"Other Indo-European languages"</span>, <span class="st">"4"</span><span class="sc">~</span><span class="st">"Asian and Pacific Island languages"</span>, <span class="st">"5"</span><span class="sc">~</span><span class="st">"Other Language"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb4-136"><a href="#cb4-136" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">Language=</span><span class="fu">as.factor</span>(Language)) <span class="sc">|&gt;</span></span>
+<span id="cb4-137"><a href="#cb4-137" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(<span class="sc">!</span><span class="fu">c</span>(<span class="st">"HHL"</span>))</span>
+<span id="cb4-138"><a href="#cb4-138" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-139"><a href="#cb4-139" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-140"><a href="#cb4-140" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="st">"HISPEED"</span> <span class="sc">%in%</span> cat_vars){</span>
+<span id="cb4-141"><a href="#cb4-141" aria-hidden="true" tabindex="-1"></a>    data_tibble <span class="ot">&lt;-</span> data_tibble <span class="sc">|&gt;</span></span>
+<span id="cb4-142"><a href="#cb4-142" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(data_tibble, <span class="at">Highspeed_Internet=</span><span class="fu">case_match</span>(HISPEED, <span class="st">"0"</span><span class="sc">~</span><span class="st">"N/A"</span>, <span class="st">"1"</span><span class="sc">~</span><span class="st">"Yes"</span>, <span class="st">"2"</span><span class="sc">~</span><span class="st">"No"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb4-143"><a href="#cb4-143" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">Highspeed_Internet=</span><span class="fu">as.factor</span>(Highspeed_Internet)) <span class="sc">|&gt;</span></span>
+<span id="cb4-144"><a href="#cb4-144" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(<span class="sc">!</span><span class="fu">c</span>(<span class="st">"HISPEED"</span>))</span>
+<span id="cb4-145"><a href="#cb4-145" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-146"><a href="#cb4-146" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-147"><a href="#cb4-147" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="st">"JWTRNS"</span> <span class="sc">%in%</span> cat_vars){</span>
+<span id="cb4-148"><a href="#cb4-148" aria-hidden="true" tabindex="-1"></a>    data_tibble <span class="ot">&lt;-</span> data_tibble <span class="sc">|&gt;</span></span>
+<span id="cb4-149"><a href="#cb4-149" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(data_tibble, <span class="at">Transportation_to_Work=</span><span class="fu">case_match</span>(JWTRNS, <span class="st">"0"</span><span class="sc">~</span><span class="st">"N/A"</span>, <span class="st">"1"</span><span class="sc">~</span><span class="st">"Car, truck, or van"</span>, <span class="st">"2"</span><span class="sc">~</span><span class="st">"Bus"</span>, <span class="st">"3"</span><span class="sc">~</span><span class="st">"Subway or elevated rail"</span>, <span class="st">"4"</span><span class="sc">~</span><span class="st">"Long-distance train or commuter rail"</span>, <span class="st">"5"</span><span class="sc">~</span><span class="st">"Light rail, streetcar, or trolley"</span>, <span class="st">"6"</span><span class="sc">~</span><span class="st">"Ferryboat"</span>, <span class="st">"7"</span><span class="sc">~</span><span class="st">"Taxicab"</span>, <span class="st">"8"</span><span class="sc">~</span><span class="st">"Motorcycle"</span>, <span class="st">"9"</span><span class="sc">~</span><span class="st">"Bicycle"</span>, <span class="st">"10"</span><span class="sc">~</span><span class="st">"Walked"</span>, <span class="st">"11"</span><span class="sc">~</span><span class="st">"Worked from home"</span>, <span class="st">"12"</span><span class="sc">~</span><span class="st">"Other method"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb4-150"><a href="#cb4-150" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">Transportation_to_Work=</span><span class="fu">as.factor</span>(Transportation_to_Work)) <span class="sc">|&gt;</span></span>
+<span id="cb4-151"><a href="#cb4-151" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(<span class="sc">!</span><span class="fu">c</span>(<span class="st">"JWTRNS"</span>))</span>
+<span id="cb4-152"><a href="#cb4-152" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-153"><a href="#cb4-153" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-154"><a href="#cb4-154" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="st">"SCH"</span> <span class="sc">%in%</span> cat_vars){</span>
+<span id="cb4-155"><a href="#cb4-155" aria-hidden="true" tabindex="-1"></a>    data_tibble <span class="ot">&lt;-</span> data_tibble <span class="sc">|&gt;</span></span>
+<span id="cb4-156"><a href="#cb4-156" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(data_tibble, <span class="at">School_Enrollment=</span><span class="fu">case_match</span>(SCH, <span class="st">"0"</span><span class="sc">~</span><span class="st">"N/A"</span>, <span class="st">"1"</span><span class="sc">~</span><span class="st">"No"</span>, <span class="st">"2"</span><span class="sc">~</span><span class="st">"Public"</span>, <span class="st">"3"</span><span class="sc">~</span><span class="st">"private"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb4-157"><a href="#cb4-157" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">School_Enrollment=</span><span class="fu">as.factor</span>(School_Enrollment)) <span class="sc">|&gt;</span></span>
+<span id="cb4-158"><a href="#cb4-158" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(<span class="sc">!</span><span class="fu">c</span>(<span class="st">"SCH"</span>))</span>
+<span id="cb4-159"><a href="#cb4-159" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-160"><a href="#cb4-160" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-161"><a href="#cb4-161" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="st">"SCHL"</span> <span class="sc">%in%</span> cat_vars){</span>
+<span id="cb4-162"><a href="#cb4-162" aria-hidden="true" tabindex="-1"></a>    data_tibble <span class="ot">&lt;-</span> data_tibble <span class="sc">|&gt;</span></span>
+<span id="cb4-163"><a href="#cb4-163" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(data_tibble, <span class="at">Educational_Attainment=</span><span class="fu">case_match</span>(SCHL, <span class="st">"0"</span><span class="sc">~</span><span class="st">"N/A"</span>, <span class="st">"1"</span><span class="sc">~</span><span class="st">"None"</span>, <span class="st">"2"</span><span class="sc">~</span><span class="st">"Nursery/Preschool"</span>, <span class="st">"3"</span><span class="sc">~</span><span class="st">"Kindergarten"</span>, <span class="st">"4"</span><span class="sc">~</span><span class="st">"Grade 1"</span>, <span class="st">"5"</span><span class="sc">~</span><span class="st">"Grade 2"</span>, <span class="st">"6"</span><span class="sc">~</span><span class="st">"Grade 3"</span>, <span class="st">"7"</span><span class="sc">~</span><span class="st">"Grade 4"</span>, <span class="st">"8"</span><span class="sc">~</span><span class="st">"Grade 5"</span>, <span class="st">"9"</span><span class="sc">~</span><span class="st">"Grade 6"</span>, <span class="st">"10"</span><span class="sc">~</span><span class="st">"Grade 7"</span>, <span class="st">"11"</span><span class="sc">~</span><span class="st">"Grade 8"</span>, <span class="st">"12"</span><span class="sc">~</span><span class="st">"Grade 9"</span>, <span class="st">"13"</span><span class="sc">~</span><span class="st">"Grade 10"</span>, <span class="st">"14"</span><span class="sc">~</span><span class="st">"Grade 11"</span>, <span class="st">"15"</span><span class="sc">~</span><span class="st">"Grade 12, no diploma"</span>, <span class="st">"16"</span><span class="sc">~</span><span class="st">"HS Diploma"</span>, <span class="st">"17"</span><span class="sc">~</span><span class="st">"GED or alt cred"</span>, <span class="st">"18"</span><span class="sc">~</span><span class="st">"Some college (&lt;1 year)"</span>, <span class="st">"19"</span><span class="sc">~</span><span class="st">"Some college (&gt;1 year), no degree"</span>, <span class="st">"20"</span><span class="sc">~</span><span class="st">"Associate's degree"</span>, <span class="st">"21"</span><span class="sc">~</span><span class="st">"Bachelor's degree"</span>, <span class="st">"22"</span><span class="sc">~</span><span class="st">"Master's degree"</span>, <span class="st">"23"</span><span class="sc">~</span><span class="st">"Professional degree beyond a bachelor's degree"</span>, <span class="st">"24"</span><span class="sc">~</span><span class="st">"Doctorate degree"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb4-164"><a href="#cb4-164" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">Educational_Attainment=</span><span class="fu">as.factor</span>(Educational_Attainment)) <span class="sc">|&gt;</span></span>
+<span id="cb4-165"><a href="#cb4-165" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(<span class="sc">!</span><span class="fu">c</span>(<span class="st">"SCHL"</span>))</span>
+<span id="cb4-166"><a href="#cb4-166" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-167"><a href="#cb4-167" aria-hidden="true" tabindex="-1"></a>  <span class="do">####################################################################################################</span></span>
+<span id="cb4-168"><a href="#cb4-168" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-169"><a href="#cb4-169" aria-hidden="true" tabindex="-1"></a>  <span class="co"># convert numeric vars to numeric type, rename numeric columns to meaningful names</span></span>
+<span id="cb4-170"><a href="#cb4-170" aria-hidden="true" tabindex="-1"></a>  data_tibble <span class="ot">&lt;-</span> data_tibble <span class="sc">|&gt;</span></span>
+<span id="cb4-171"><a href="#cb4-171" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="fu">across</span>(numer_vars[numer_vars <span class="sc">!=</span><span class="st">"JWAP"</span> <span class="sc">&amp;</span> numer_vars<span class="sc">!=</span><span class="st">"JWDP"</span>], as.numeric)) <span class="sc">|&gt;</span></span>
+<span id="cb4-172"><a href="#cb4-172" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rename</span>(<span class="fu">any_of</span>(<span class="fu">c</span>(<span class="at">Age=</span><span class="st">"AGEP"</span>, <span class="at">Gas_Bill_Monthly=</span><span class="st">"GASP"</span>, <span class="at">Rent_Percent_of_Income=</span><span class="st">"GRPIP"</span>, <span class="at">Arrive_at_Work=</span><span class="st">"JWAP"</span>, <span class="at">Depart_for_Work=</span><span class="st">"JWDP"</span>, <span class="at">Work_Travel_Time=</span><span class="st">"JWMNP"</span>, <span class="at">PUMS_Weight=</span><span class="st">"PWGTP"</span>, <span class="at">State=</span><span class="st">"state"</span>)))</span>
+<span id="cb4-173"><a href="#cb4-173" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-174"><a href="#cb4-174" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(data_tibble)</span>
+<span id="cb4-175"><a href="#cb4-175" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>We created four vectors named <code>all_numer_vars</code>, <code>all_cat_vars</code>, <code>all_geog</code>, <code>key_query</code> that had our variables that we would need for our future function for input validation.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">#constants needed in the code chunk below</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>all_numer_vars <span class="ot">=</span> <span class="fu">c</span>(<span class="st">"AGEP"</span>, <span class="st">"GASP"</span>, <span class="st">"GRPIP"</span>, <span class="st">"JWAP"</span>, <span class="st">"JWDP"</span>, <span class="st">"JWMNP"</span>, <span class="st">"PWGTP"</span>)</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>all_cat_vars <span class="ot">=</span> <span class="fu">c</span>(<span class="st">"FER"</span>, <span class="st">"HHL"</span>, <span class="st">"HISPEED"</span>, <span class="st">"JWTRNS"</span>, <span class="st">"SCH"</span>, <span class="st">"SEX"</span>, <span class="st">"SCHL"</span>)</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>all_geog <span class="ot">=</span> <span class="fu">c</span>(<span class="st">"All"</span>, <span class="st">"Region"</span>, <span class="st">"Division"</span>, <span class="st">"State"</span>)</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>key_query <span class="ot">&lt;-</span> <span class="st">"&amp;key=ef57316550be8b6492df7ca01b32a193c83ed8fc"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">#constants needed in the code chunk below</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>all_numer_vars <span class="ot">=</span> <span class="fu">c</span>(<span class="st">"AGEP"</span>, <span class="st">"GASP"</span>, <span class="st">"GRPIP"</span>, <span class="st">"JWAP"</span>, <span class="st">"JWDP"</span>, <span class="st">"JWMNP"</span>, <span class="st">"PWGTP"</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>all_cat_vars <span class="ot">=</span> <span class="fu">c</span>(<span class="st">"FER"</span>, <span class="st">"HHL"</span>, <span class="st">"HISPEED"</span>, <span class="st">"JWTRNS"</span>, <span class="st">"SCH"</span>, <span class="st">"SEX"</span>, <span class="st">"SCHL"</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>all_geog <span class="ot">=</span> <span class="fu">c</span>(<span class="st">"All"</span>, <span class="st">"Region"</span>, <span class="st">"Division"</span>, <span class="st">"State"</span>)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>key_query <span class="ot">&lt;-</span> <span class="st">"&amp;key=ef57316550be8b6492df7ca01b32a193c83ed8fc"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <section id="customizable-function-to-query-the-api" class="level2">
 <h2 class="anchored" data-anchor-id="customizable-function-to-query-the-api">Customizable function to query the API</h2>
@@ -365,28 +384,106 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><p><strong>numer_vars</strong>: this argument represents the numeric variables to be returned with ‘AGEP’ and ‘PWGTP’ as defaults. The variable ‘PWGTP’ will always be returned. This input parameter has the following options for the user: AGEP, GASP, GRPIP, JWAP (time), JWDP (time), and JWMNP.</p></li>
 <li><p><strong>cat_vars</strong>: this argument represents the categorical variables to be returned with ‘SEX’ as the default value. This input parameter has the following options for the user: FER, HHL, HISPEED, JWTRNS, SCH, SCHL, and SEX.</p></li>
 <li><p><strong>geog</strong>: this argument represents the geography level to be returned with ‘State’ as the default value. This input parameter has the following options for the user: All, Region, Division, and State</p></li>
+<li><p><strong>geog</strong>: this argument represents the value by which to subset the region. The default is ‘12’, which is the value for Florida, the state our group was assigned.</p></li>
 </ul>
-<p>To allow the user to specify multiple years of survey data we wrote the R function <code>query_with_years</code>.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>query_with_years <span class="ot">&lt;-</span> <span class="cf">function</span>(<span class="at">years=</span><span class="fu">c</span>(<span class="dv">2022</span>), ...){</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  combined_tibble <span class="ot">=</span> <span class="fu">tibble</span>()</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span>(i <span class="cf">in</span> <span class="fu">seq_along</span>(years)){</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    year_tibble <span class="ot">&lt;-</span> <span class="fu">query_census_api</span>(<span class="at">year=</span>years[i], ...) <span class="sc">|&gt;</span></span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>                      <span class="fu">mutate</span>(<span class="at">Year=</span>years[i])</span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    combined_tibble <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(combined_tibble, year_tibble)</span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">class</span>(combined_tibble) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"census"</span>, <span class="fu">class</span>(combined_tibble))</span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(combined_tibble)</span>
-<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="co">#Testing our function</span></span>
-<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>data_tibble <span class="ot">&lt;-</span> <span class="fu">query_with_years</span>(<span class="at">years=</span><span class="fu">c</span>(<span class="dv">2019</span>), <span class="at">numer_vars=</span><span class="fu">c</span>(<span class="st">"AGEP"</span>, <span class="st">"GASP"</span>), <span class="at">cat_vars=</span><span class="fu">c</span>(<span class="st">"FER"</span>, <span class="st">"HHL"</span>, <span class="st">"SEX"</span>))</span>
-<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(data_tibble)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>query_census_api <span class="ot">&lt;-</span> <span class="cf">function</span>(<span class="at">year=</span><span class="dv">2022</span>, <span class="at">numer_vars=</span><span class="fu">c</span>(<span class="st">"AGEP"</span>), <span class="at">cat_vars=</span><span class="fu">c</span>(<span class="st">"SEX"</span>), <span class="at">geog=</span><span class="st">"State"</span>, <span class="at">geog_values=</span><span class="fu">c</span>(<span class="st">'12'</span>)){</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="do">######################INPUT VALIDATION######################</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">#year validation</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> ((<span class="sc">!</span>year <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">2010</span><span class="sc">:</span><span class="dv">2019</span>, <span class="dv">2021</span><span class="sc">:</span><span class="dv">2022</span>))){</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stop</span>(<span class="st">"Year must be between 2010 and 2022, excluding 2020."</span>)</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>  <span class="co">#numer_vars validation</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>  numer_vars <span class="ot">&lt;-</span> <span class="fu">union</span>(numer_vars, <span class="st">"PWGTP"</span>)</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="fu">length</span>(numer_vars) <span class="sc">&lt;</span> <span class="dv">2</span>) {</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stop</span>(<span class="st">"Not enough numerical variables specified. Options are AGEP, GASP, GRPIP, JWAP, JWDP, JWMNP, and PWGTP"</span>)</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> <span class="cf">if</span>(<span class="fu">length</span>(<span class="fu">union</span>(all_numer_vars, numer_vars)) <span class="sc">&gt;</span> <span class="fu">length</span>(all_numer_vars)){</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stop</span>(<span class="st">"numer_vars includes variables which are not in the allowed set, which is AGEP, GASP, GRPIP, JWAP, JWDP, JWMNP, and PWGTP"</span>)</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>  <span class="co">#cat_vars validation</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="fu">length</span>(cat_vars) <span class="sc">&lt;</span> <span class="dv">1</span>) {</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stop</span>(<span class="st">"Not enough categorical variables specified. Options are FER, HHL, HISPEED, JWTRNS, SCH, SCHL, and SEX"</span>)</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> <span class="cf">if</span>(<span class="fu">length</span>(<span class="fu">union</span>(all_cat_vars, cat_vars)) <span class="sc">&gt;</span> <span class="fu">length</span>(all_cat_vars)){</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stop</span>(<span class="st">"cat_vars includes variables which are not in the allowed set, which is FER, HHL, HISPEED, JWTRNS, SCH, SCHL, and SEX"</span>)</span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>  <span class="co">#geog validation</span></span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span>(geog <span class="sc">%in%</span> all_geog)){</span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stop</span>(<span class="st">"invalid value for geog. Options are All, Region, Division, and State"</span>)</span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a>  <span class="do">######################INPUT VALIDATION######################</span></span>
+<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a>  <span class="co">#now to build the query URL</span></span>
+<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a>  vars_query <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="fu">c</span>(numer_vars, cat_vars), <span class="at">collapse=</span><span class="st">","</span>)</span>
+<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a>  geog_query <span class="ot">&lt;-</span> <span class="fu">character</span>()</span>
+<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(geog <span class="sc">!=</span> <span class="st">"All"</span>){</span>
+<span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">length</span>(geog_values) <span class="sc">==</span> <span class="dv">0</span>) {</span>
+<span id="cb6-38"><a href="#cb6-38" aria-hidden="true" tabindex="-1"></a>      geog_query <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"&amp;for="</span>, <span class="fu">tolower</span>(geog), <span class="st">":*"</span>)</span>
+<span id="cb6-39"><a href="#cb6-39" aria-hidden="true" tabindex="-1"></a>    } <span class="cf">else</span> {</span>
+<span id="cb6-40"><a href="#cb6-40" aria-hidden="true" tabindex="-1"></a>      geog_query <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"&amp;for="</span>, <span class="fu">tolower</span>(geog), <span class="st">":"</span>, <span class="fu">paste0</span>(geog_values, <span class="at">collapse=</span><span class="st">","</span>))</span>
+<span id="cb6-41"><a href="#cb6-41" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb6-42"><a href="#cb6-42" aria-hidden="true" tabindex="-1"></a>  } </span>
+<span id="cb6-43"><a href="#cb6-43" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb6-44"><a href="#cb6-44" aria-hidden="true" tabindex="-1"></a>  URL_census <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"https://api.census.gov/data/"</span>, </span>
+<span id="cb6-45"><a href="#cb6-45" aria-hidden="true" tabindex="-1"></a>                      year, </span>
+<span id="cb6-46"><a href="#cb6-46" aria-hidden="true" tabindex="-1"></a>                      <span class="st">"/acs/acs1/pums?"</span>,</span>
+<span id="cb6-47"><a href="#cb6-47" aria-hidden="true" tabindex="-1"></a>                      <span class="st">"get="</span>,</span>
+<span id="cb6-48"><a href="#cb6-48" aria-hidden="true" tabindex="-1"></a>                      vars_query,</span>
+<span id="cb6-49"><a href="#cb6-49" aria-hidden="true" tabindex="-1"></a>                      geog_query,</span>
+<span id="cb6-50"><a href="#cb6-50" aria-hidden="true" tabindex="-1"></a>                      key_query)</span>
+<span id="cb6-51"><a href="#cb6-51" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb6-52"><a href="#cb6-52" aria-hidden="true" tabindex="-1"></a>  <span class="co"># fetch the data using the new URL, get the data in a tibble, and clean the data using the format function</span></span>
+<span id="cb6-53"><a href="#cb6-53" aria-hidden="true" tabindex="-1"></a>  data_info <span class="ot">&lt;-</span> httr<span class="sc">::</span><span class="fu">GET</span>(URL_census)</span>
+<span id="cb6-54"><a href="#cb6-54" aria-hidden="true" tabindex="-1"></a>  data <span class="ot">=</span> <span class="fu">get_tibble</span>(data_info)</span>
+<span id="cb6-55"><a href="#cb6-55" aria-hidden="true" tabindex="-1"></a>  clean_data <span class="ot">=</span> <span class="fu">format_num_and_cat_vars</span>(data, numer_vars, cat_vars)</span>
+<span id="cb6-56"><a href="#cb6-56" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(clean_data)</span>
+<span id="cb6-57"><a href="#cb6-57" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb6-58"><a href="#cb6-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-59"><a href="#cb6-59" aria-hidden="true" tabindex="-1"></a><span class="co">#Testing our function</span></span>
+<span id="cb6-60"><a href="#cb6-60" aria-hidden="true" tabindex="-1"></a>data_tibble_test <span class="ot">&lt;-</span> <span class="fu">query_census_api</span>(<span class="at">year=</span><span class="dv">2018</span>, <span class="at">numer_vars=</span><span class="fu">c</span>(<span class="st">"AGEP"</span>), <span class="at">cat_vars=</span><span class="fu">c</span>(<span class="st">"HISPEED"</span>))</span>
+<span id="cb6-61"><a href="#cb6-61" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(data_tibble_test)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 6 × 4
+    Age PUMS_Weight State Highspeed_Internet
+  &lt;dbl&gt;       &lt;dbl&gt; &lt;chr&gt; &lt;fct&gt;             
+1    15          26 12    N/A               
+2    72          24 12    N/A               
+3    37          31 12    N/A               
+4    21          76 12    N/A               
+5    18          72 12    N/A               
+6    38          62 12    N/A               </code></pre>
+</div>
+</div>
+<p>To allow the user to specify multiple years of survey data, we wrote the R function <code>query_with_years</code>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>query_with_years <span class="ot">&lt;-</span> <span class="cf">function</span>(<span class="at">years=</span><span class="fu">c</span>(<span class="dv">2022</span>), ...){</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># initialize an empty tibble</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  combined_tibble <span class="ot">=</span> <span class="fu">tibble</span>()</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="co"># loop through the years and add on each year's data</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span>(i <span class="cf">in</span> <span class="fu">seq_along</span>(years)){</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    year_tibble <span class="ot">&lt;-</span> <span class="fu">query_census_api</span>(<span class="at">year=</span>years[i], ...) <span class="sc">|&gt;</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>                      <span class="fu">mutate</span>(<span class="at">Year=</span>years[i])</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    combined_tibble <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(combined_tibble, year_tibble)</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>  <span class="co"># add 'census' class to tibble</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">class</span>(combined_tibble) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"census"</span>, <span class="fu">class</span>(combined_tibble))</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(combined_tibble)</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a><span class="co">#Testing our function</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>data_tibble <span class="ot">&lt;-</span> <span class="fu">query_with_years</span>(<span class="at">years=</span><span class="fu">c</span>(<span class="dv">2019</span>), <span class="at">numer_vars=</span><span class="fu">c</span>(<span class="st">"AGEP"</span>, <span class="st">"GASP"</span>), <span class="at">cat_vars=</span><span class="fu">c</span>(<span class="st">"FER"</span>, <span class="st">"HHL"</span>, <span class="st">"SEX"</span>))</span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(data_tibble)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 6 × 8
     Age Gas_Bill_Monthly PUMS_Weight State Recent_Birth Sex    Language  Year
@@ -402,78 +499,78 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="writing-a-generic-function-for-summarizing" class="level2">
 <h2 class="anchored" data-anchor-id="writing-a-generic-function-for-summarizing">Writing a Generic Function for Summarizing</h2>
-<p>Now that we have our data, lets try to do something with it. We created a function named <code>summary.census</code> that takes in three arguments: the tibble data set, the numeric variables (the default will summarize all the numeric variables other than PWGTP) and any categorical variables that that you want to summarize.</p>
+<p>Now that we have our data, let’s try to do something with it. We created a <code>summary()</code> function for the census class that takes in three arguments: the tibble data set, numeric variables to summarize, and categorical variables to summarize. If no numeric variables are specified, all will be summarized; similar for categorical variables.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>summary.census <span class="ot">&lt;-</span> <span class="cf">function</span>(data_tibble, <span class="at">numer_vars=</span><span class="fu">c</span>(<span class="st">"All"</span>), <span class="at">cat_vars=</span><span class="fu">c</span>(<span class="st">"All"</span>)){</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="co">#if user doesn't specify numerical variables to summarize</span></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="st">"All"</span> <span class="sc">%in%</span> numer_vars) {</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    numer_vars <span class="ot">&lt;-</span> <span class="fu">c</span>()</span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span>(i <span class="cf">in</span> <span class="fu">seq_along</span>(<span class="fu">names</span>(data_tibble))){</span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> (<span class="fu">is.numeric</span>(data_tibble[[i]]) <span class="sc">&amp;</span> <span class="fu">names</span>(data_tibble)[i] <span class="sc">!=</span> <span class="st">"PUMS_Weight"</span>) {</span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>          numer_vars <span class="ot">&lt;-</span> <span class="fu">c</span>(numer_vars, <span class="fu">names</span>(data_tibble)[i])</span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>      }</span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>    }</span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>  <span class="co">#if user doesn't specify categorical variables to summarize</span></span>
-<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="st">"All"</span> <span class="sc">%in%</span> cat_vars){</span>
-<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>    cat_vars <span class="ot">&lt;-</span> <span class="fu">c</span>()</span>
-<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span>(i <span class="cf">in</span> <span class="fu">seq_along</span>(<span class="fu">names</span>(data_tibble))){</span>
-<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.numeric</span>(data_tibble[[i]])) {</span>
-<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>          cat_vars <span class="ot">&lt;-</span> <span class="fu">c</span>(cat_vars, <span class="fu">names</span>(data_tibble)[i])</span>
-<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>      }</span>
-<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>    }</span>
-<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a>  <span class="co"># start a blank tibble for the numerical variable summary</span></span>
-<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>  numer_summary <span class="ot">=</span> <span class="fu">tibble</span>()</span>
-<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a>  <span class="co"># grab the weight data for numerical calculations</span></span>
-<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a>  weight_col <span class="ot">&lt;-</span> data_tibble<span class="sc">$</span>PUMS_Weight</span>
-<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb7-33"><a href="#cb7-33" aria-hidden="true" tabindex="-1"></a>  <span class="co"># numerical var calculations</span></span>
-<span id="cb7-34"><a href="#cb7-34" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (numer_var <span class="cf">in</span> numer_vars){</span>
-<span id="cb7-35"><a href="#cb7-35" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb7-36"><a href="#cb7-36" aria-hidden="true" tabindex="-1"></a>    <span class="co">#Find mean and sd of numeric variables</span></span>
-<span id="cb7-37"><a href="#cb7-37" aria-hidden="true" tabindex="-1"></a>    sample_mean <span class="ot">&lt;-</span> <span class="fu">sum</span>(data_tibble[, numer_var]<span class="sc">*</span>weight_col)<span class="sc">/</span><span class="fu">sum</span>(weight_col)</span>
-<span id="cb7-38"><a href="#cb7-38" aria-hidden="true" tabindex="-1"></a>    sample_sd <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(<span class="fu">sum</span>(data_tibble[, numer_var]<span class="sc">**</span><span class="dv">2</span><span class="sc">*</span>weight_col)<span class="sc">/</span><span class="fu">sum</span>(weight_col)<span class="sc">-</span>sample_mean<span class="sc">**</span><span class="dv">2</span>)</span>
-<span id="cb7-39"><a href="#cb7-39" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-40"><a href="#cb7-40" aria-hidden="true" tabindex="-1"></a>    <span class="co"># add line to summary tibble</span></span>
-<span id="cb7-41"><a href="#cb7-41" aria-hidden="true" tabindex="-1"></a>    numer_summary <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(numer_summary, <span class="fu">tibble</span>(<span class="at">variable=</span>numer_var, <span class="at">mean=</span>sample_mean, <span class="at">sd=</span>sample_sd))</span>
-<span id="cb7-42"><a href="#cb7-42" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb7-43"><a href="#cb7-43" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb7-44"><a href="#cb7-44" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-45"><a href="#cb7-45" aria-hidden="true" tabindex="-1"></a>  <span class="co"># start a blank list for the categorical variable summary</span></span>
-<span id="cb7-46"><a href="#cb7-46" aria-hidden="true" tabindex="-1"></a>  cat_summary <span class="ot">=</span> <span class="fu">list</span>()</span>
-<span id="cb7-47"><a href="#cb7-47" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb7-48"><a href="#cb7-48" aria-hidden="true" tabindex="-1"></a>  <span class="co"># get counts for each cat var</span></span>
-<span id="cb7-49"><a href="#cb7-49" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (cat_var <span class="cf">in</span> cat_vars){</span>
-<span id="cb7-50"><a href="#cb7-50" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb7-51"><a href="#cb7-51" aria-hidden="true" tabindex="-1"></a>    var_count <span class="ot">&lt;-</span> data_tibble <span class="sc">|&gt;</span></span>
-<span id="cb7-52"><a href="#cb7-52" aria-hidden="true" tabindex="-1"></a>      <span class="fu">count</span>(data_tibble[<span class="sc">!!</span>cat_var]) <span class="sc">|&gt;</span></span>
-<span id="cb7-53"><a href="#cb7-53" aria-hidden="true" tabindex="-1"></a>      <span class="fu">rename</span>(<span class="at">count=</span>n)</span>
-<span id="cb7-54"><a href="#cb7-54" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb7-55"><a href="#cb7-55" aria-hidden="true" tabindex="-1"></a>    <span class="co"># add tibble to summary list</span></span>
-<span id="cb7-56"><a href="#cb7-56" aria-hidden="true" tabindex="-1"></a>    cat_summary <span class="ot">&lt;-</span> <span class="fu">c</span>(cat_summary, <span class="fu">list</span>(var_count))</span>
-<span id="cb7-57"><a href="#cb7-57" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb7-58"><a href="#cb7-58" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb7-59"><a href="#cb7-59" aria-hidden="true" tabindex="-1"></a>  <span class="co"># label the categorical variable count summaries</span></span>
-<span id="cb7-60"><a href="#cb7-60" aria-hidden="true" tabindex="-1"></a>  <span class="fu">names</span>(cat_summary) <span class="ot">&lt;-</span> cat_vars</span>
-<span id="cb7-61"><a href="#cb7-61" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb7-62"><a href="#cb7-62" aria-hidden="true" tabindex="-1"></a>  <span class="co"># return all summaries</span></span>
-<span id="cb7-63"><a href="#cb7-63" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">numerical=</span>numer_summary, <span class="at">categorical=</span>cat_summary))</span>
-<span id="cb7-64"><a href="#cb7-64" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb7-65"><a href="#cb7-65" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-66"><a href="#cb7-66" aria-hidden="true" tabindex="-1"></a><span class="co">#test function </span></span>
-<span id="cb7-67"><a href="#cb7-67" aria-hidden="true" tabindex="-1"></a><span class="co"># summary_test&lt;-summary.census(data_tibble,numer_vars=c("Age"),cat_vars=c("Sex"))</span></span>
-<span id="cb7-68"><a href="#cb7-68" aria-hidden="true" tabindex="-1"></a>summary_test<span class="ot">&lt;-</span><span class="fu">summary</span>(data_tibble)</span>
-<span id="cb7-69"><a href="#cb7-69" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-70"><a href="#cb7-70" aria-hidden="true" tabindex="-1"></a>summary_test<span class="sc">$</span>numerical</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>summary.census <span class="ot">&lt;-</span> <span class="cf">function</span>(data_tibble, <span class="at">numer_vars=</span><span class="fu">c</span>(<span class="st">"All"</span>), <span class="at">cat_vars=</span><span class="fu">c</span>(<span class="st">"All"</span>)){</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="co">#if user doesn't specify numerical variables to summarize</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="st">"All"</span> <span class="sc">%in%</span> numer_vars) {</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    numer_vars <span class="ot">&lt;-</span> <span class="fu">c</span>()</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span>(i <span class="cf">in</span> <span class="fu">seq_along</span>(<span class="fu">names</span>(data_tibble))){</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> (<span class="fu">is.numeric</span>(data_tibble[[i]]) <span class="sc">&amp;</span> <span class="fu">names</span>(data_tibble)[i] <span class="sc">!=</span> <span class="st">"PUMS_Weight"</span>) {</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>          numer_vars <span class="ot">&lt;-</span> <span class="fu">c</span>(numer_vars, <span class="fu">names</span>(data_tibble)[i])</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>      }</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>  <span class="co">#if user doesn't specify categorical variables to summarize</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="st">"All"</span> <span class="sc">%in%</span> cat_vars){</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>    cat_vars <span class="ot">&lt;-</span> <span class="fu">c</span>()</span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span>(i <span class="cf">in</span> <span class="fu">seq_along</span>(<span class="fu">names</span>(data_tibble))){</span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.numeric</span>(data_tibble[[i]])) {</span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>          cat_vars <span class="ot">&lt;-</span> <span class="fu">c</span>(cat_vars, <span class="fu">names</span>(data_tibble)[i])</span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>      }</span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a>  <span class="co"># start a blank tibble for the numerical variable summary</span></span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a>  numer_summary <span class="ot">=</span> <span class="fu">tibble</span>()</span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a>  <span class="co"># grab the weight data for numerical calculations</span></span>
+<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a>  weight_col <span class="ot">&lt;-</span> data_tibble<span class="sc">$</span>PUMS_Weight</span>
+<span id="cb10-32"><a href="#cb10-32" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a>  <span class="co"># numerical var calculations</span></span>
+<span id="cb10-34"><a href="#cb10-34" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (numer_var <span class="cf">in</span> numer_vars){</span>
+<span id="cb10-35"><a href="#cb10-35" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb10-36"><a href="#cb10-36" aria-hidden="true" tabindex="-1"></a>    <span class="co">#Find mean and sd of numeric variables</span></span>
+<span id="cb10-37"><a href="#cb10-37" aria-hidden="true" tabindex="-1"></a>    sample_mean <span class="ot">&lt;-</span> <span class="fu">sum</span>(data_tibble[, numer_var]<span class="sc">*</span>weight_col)<span class="sc">/</span><span class="fu">sum</span>(weight_col)</span>
+<span id="cb10-38"><a href="#cb10-38" aria-hidden="true" tabindex="-1"></a>    sample_sd <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(<span class="fu">sum</span>(data_tibble[, numer_var]<span class="sc">**</span><span class="dv">2</span><span class="sc">*</span>weight_col)<span class="sc">/</span><span class="fu">sum</span>(weight_col)<span class="sc">-</span>sample_mean<span class="sc">**</span><span class="dv">2</span>)</span>
+<span id="cb10-39"><a href="#cb10-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-40"><a href="#cb10-40" aria-hidden="true" tabindex="-1"></a>    <span class="co"># add line to summary tibble</span></span>
+<span id="cb10-41"><a href="#cb10-41" aria-hidden="true" tabindex="-1"></a>    numer_summary <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(numer_summary, <span class="fu">tibble</span>(<span class="at">variable=</span>numer_var, <span class="at">mean=</span>sample_mean, <span class="at">sd=</span>sample_sd))</span>
+<span id="cb10-42"><a href="#cb10-42" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb10-43"><a href="#cb10-43" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb10-44"><a href="#cb10-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-45"><a href="#cb10-45" aria-hidden="true" tabindex="-1"></a>  <span class="co"># start a blank list for the categorical variable summary</span></span>
+<span id="cb10-46"><a href="#cb10-46" aria-hidden="true" tabindex="-1"></a>  cat_summary <span class="ot">=</span> <span class="fu">list</span>()</span>
+<span id="cb10-47"><a href="#cb10-47" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb10-48"><a href="#cb10-48" aria-hidden="true" tabindex="-1"></a>  <span class="co"># get counts for each cat var</span></span>
+<span id="cb10-49"><a href="#cb10-49" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (cat_var <span class="cf">in</span> cat_vars){</span>
+<span id="cb10-50"><a href="#cb10-50" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb10-51"><a href="#cb10-51" aria-hidden="true" tabindex="-1"></a>    var_count <span class="ot">&lt;-</span> data_tibble <span class="sc">|&gt;</span></span>
+<span id="cb10-52"><a href="#cb10-52" aria-hidden="true" tabindex="-1"></a>      <span class="fu">count</span>(data_tibble[<span class="sc">!!</span>cat_var]) <span class="sc">|&gt;</span></span>
+<span id="cb10-53"><a href="#cb10-53" aria-hidden="true" tabindex="-1"></a>      <span class="fu">rename</span>(<span class="at">count=</span>n)</span>
+<span id="cb10-54"><a href="#cb10-54" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb10-55"><a href="#cb10-55" aria-hidden="true" tabindex="-1"></a>    <span class="co"># add tibble to summary list</span></span>
+<span id="cb10-56"><a href="#cb10-56" aria-hidden="true" tabindex="-1"></a>    cat_summary <span class="ot">&lt;-</span> <span class="fu">c</span>(cat_summary, <span class="fu">list</span>(var_count))</span>
+<span id="cb10-57"><a href="#cb10-57" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb10-58"><a href="#cb10-58" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb10-59"><a href="#cb10-59" aria-hidden="true" tabindex="-1"></a>  <span class="co"># label the categorical variable count summaries</span></span>
+<span id="cb10-60"><a href="#cb10-60" aria-hidden="true" tabindex="-1"></a>  <span class="fu">names</span>(cat_summary) <span class="ot">&lt;-</span> cat_vars</span>
+<span id="cb10-61"><a href="#cb10-61" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb10-62"><a href="#cb10-62" aria-hidden="true" tabindex="-1"></a>  <span class="co"># return all summaries</span></span>
+<span id="cb10-63"><a href="#cb10-63" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">numerical=</span>numer_summary, <span class="at">categorical=</span>cat_summary))</span>
+<span id="cb10-64"><a href="#cb10-64" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb10-65"><a href="#cb10-65" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-66"><a href="#cb10-66" aria-hidden="true" tabindex="-1"></a><span class="co">#test function </span></span>
+<span id="cb10-67"><a href="#cb10-67" aria-hidden="true" tabindex="-1"></a><span class="co"># summary_test&lt;-summary.census(data_tibble,numer_vars=c("Age"),cat_vars=c("Sex"))</span></span>
+<span id="cb10-68"><a href="#cb10-68" aria-hidden="true" tabindex="-1"></a>summary_test<span class="ot">&lt;-</span><span class="fu">summary</span>(data_tibble)</span>
+<span id="cb10-69"><a href="#cb10-69" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-70"><a href="#cb10-70" aria-hidden="true" tabindex="-1"></a>summary_test<span class="sc">$</span>numerical</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 3 × 3
   variable            mean    sd
@@ -482,7 +579,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 2 Gas_Bill_Monthly    9.56  27.5
 3 Year             2019      0  </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>summary_test<span class="sc">$</span>categorical</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>summary_test<span class="sc">$</span>categorical</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>$State
 # A tibble: 1 × 2
@@ -517,26 +614,30 @@ $Language
 6 Spanish                             43832</code></pre>
 </div>
 </div>
-<p>Finally, we created a basic graph function that takes in three arguments: the tibble data set, a numeric variables (the default variable is AGEP) and a categorical variable that you want to summarize (the default variable is SEX).</p>
+</section>
+</section>
+<section id="creating-a-generic-plotting-function" class="level1">
+<h1>Creating a Generic Plotting Function</h1>
+<p>Finally, we created a basic <code>plot()</code> function for the census class that takes in three arguments: the tibble data set, one numeric variable, and one categorical variable that you want to summarize. This function creates side-by-side box plots for the numerical variable, grouped by the categorical variable.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>plot.census <span class="ot">&lt;-</span> <span class="cf">function</span>(data_tibble, <span class="at">numer_var=</span><span class="cn">NULL</span>, <span class="at">cat_var=</span><span class="cn">NULL</span>){</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># input validation</span></span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="fu">is.null</span>(numer_var) <span class="sc">|</span> <span class="fu">is.null</span>(cat_var)) {<span class="fu">stop</span>(<span class="st">"Please specify 1 numerical and 1 categorical variable."</span>)}</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="sc">!</span>(numer_var <span class="sc">%in%</span> <span class="fu">names</span>(data_tibble)) <span class="sc">|</span> <span class="sc">!</span>(cat_var <span class="sc">%in%</span> <span class="fu">names</span>(data_tibble))) {<span class="fu">stop</span>(<span class="st">"Please specify variables that are in the tibble."</span>)}</span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># creating a basic boxplot</span></span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>  graph <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(data_tibble,</span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">get</span>(cat_var), <span class="at">y =</span> <span class="fu">get</span>(numer_var), <span class="at">weight =</span> PUMS_Weight)) <span class="sc">+</span></span>
-<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_boxplot</span>() <span class="sc">+</span></span>
-<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">x=</span>numer_var, <span class="at">y=</span>cat_var)</span>
-<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(graph)</span>
-<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a><span class="co"># test the plot function</span></span>
-<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(data_tibble, <span class="at">numer_var=</span><span class="st">"Age"</span>, <span class="at">cat_var=</span><span class="st">"Recent_Birth"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>plot.census <span class="ot">&lt;-</span> <span class="cf">function</span>(data_tibble, <span class="at">numer_var=</span><span class="cn">NULL</span>, <span class="at">cat_var=</span><span class="cn">NULL</span>){</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># input validation</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="fu">is.null</span>(numer_var) <span class="sc">|</span> <span class="fu">is.null</span>(cat_var)) {<span class="fu">stop</span>(<span class="st">"Please specify 1 numerical and 1 categorical variable."</span>)}</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="sc">!</span>(numer_var <span class="sc">%in%</span> <span class="fu">names</span>(data_tibble)) <span class="sc">|</span> <span class="sc">!</span>(cat_var <span class="sc">%in%</span> <span class="fu">names</span>(data_tibble))) {<span class="fu">stop</span>(<span class="st">"Please specify variables that are in the tibble."</span>)}</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># creating a basic boxplot</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>  graph <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(data_tibble,</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">get</span>(cat_var), <span class="at">y =</span> <span class="fu">get</span>(numer_var), <span class="at">weight =</span> PUMS_Weight)) <span class="sc">+</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_boxplot</span>() <span class="sc">+</span></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">x=</span>cat_var, <span class="at">y=</span>numer_var)</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(graph)</span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a><span class="co"># test the plot function</span></span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(data_tibble, <span class="at">numer_var=</span><span class="st">"Age"</span>, <span class="at">cat_var=</span><span class="st">"Recent_Birth"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -545,42 +646,26 @@ $Language
 </div>
 </div>
 </div>
-</section>
 <section id="end-example-conclusion" class="level2">
 <h2 class="anchored" data-anchor-id="end-example-conclusion">End example (Conclusion)</h2>
-<p>We have created several functions (<code>get_tibble</code>,<code>format_num_and_cat_vars</code>,<code>query_census_api</code>,<code>query_with_years</code>,<code>summary.census</code>,<code>plot.census</code>) that will manipulate and process data sets that come from the Public Use Microdata Sample (PUMS) Census API. Lets show a couple simple example of using them. If we would like to look at only one year, we will use the <code>query_census_api</code> function and if we would like to look at multiple years we will use the <code>query_with_years</code> function. The first example will show how to use the <code>query_census_api</code> function to grab the 2018 Florida data which will be saved as an R object <code>data_tibble_test</code> and then I do basic means and standard deviations on all the variables, except for the weighting variable using the <code>summary.census</code> function and save that as a <code>summary_test</code> R object.</p>
-<p>The variables I am going to call are:</p>
+<p>We have created several functions (<code>get_tibble</code>,<code>format_num_and_cat_vars</code>,<code>query_census_api</code>,<code>query_with_years</code>,<code>summary</code>, and <code>plot</code>) that will manipulate and process data sets that come from the Public Use Microdata Sample (PUMS) Census API. Let’s show a couple of simple examples of using them.</p>
+<p>In the first example, we show how to use the summary and plot functions to make interesting comparisons of rent for each sex, and highspeed internet by rent.</p>
+<p>The variables we use are:</p>
 <ul>
-<li><p>“AGEP”=Age</p></li>
-<li><p>“GRPIP”=Gross rent as a percentage of household income past 12 months</p></li>
-<li><p>“HISPEED”=Broadband (high speed) Internet service such as cable, fiber optic, or DSL service</p></li>
+<li><p>“AGEP”/“Age”=Age</p></li>
+<li><p>“GRPIP”/“Rent_Percent_of_Income”=Gross rent as a percentage of household income past 12 months</p></li>
+<li><p>“HISPEED”/“Highspeed_Internet”=Broadband (high speed) Internet service such as cable, fiber optic, or DSL service</p></li>
+<li><p>“SEX”/“Sex”=sex of respondant</p></li>
 <li><p>geog=“State”</p></li>
 <li><p>geog_values=“12”(“Florida/FL”)</p></li>
 </ul>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Using query_census_api to look at one year </span></span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>data_tibble_test <span class="ot">&lt;-</span> <span class="fu">query_census_api</span>(<span class="at">year=</span><span class="dv">2018</span>, <span class="at">numer_vars=</span><span class="fu">c</span>(<span class="st">"AGEP"</span>,<span class="st">"GRPIP"</span>), <span class="at">cat_vars=</span><span class="fu">c</span>(<span class="st">"SEX"</span>,<span class="st">"HISPEED"</span>), <span class="at">geog=</span><span class="st">"State"</span>, <span class="at">geog_values=</span><span class="fu">c</span>(<span class="st">'12'</span>))</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="co">#print tibble</span></span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>data_tibble_test</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 202,160 × 6
-     Age Rent_Percent_of_Income PUMS_Weight State Sex    Highspeed_Internet
-   &lt;dbl&gt;                  &lt;dbl&gt;       &lt;dbl&gt; &lt;chr&gt; &lt;fct&gt;  &lt;fct&gt;             
- 1    15                      0          26 12    Male   N/A               
- 2    72                      0          24 12    Male   N/A               
- 3    37                      0          31 12    Male   N/A               
- 4    21                      0          76 12    Male   N/A               
- 5    18                      0          72 12    Male   N/A               
- 6    38                      0          62 12    Male   N/A               
- 7    35                      0          76 12    Female N/A               
- 8    24                      0           7 12    Male   N/A               
- 9    35                      0          41 12    Male   N/A               
-10    54                      0          40 12    Male   N/A               
-# ℹ 202,150 more rows</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co">#summary stats on all variables</span></span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>summary_test<span class="ot">&lt;-</span><span class="fu">summary.census</span>(data_tibble_test)</span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>summary_test</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Using query_with_years to fetch data </span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>data_tibble_test <span class="ot">&lt;-</span> <span class="fu">query_with_years</span>(<span class="at">years=</span><span class="fu">c</span>(<span class="dv">2018</span>), <span class="at">numer_vars=</span><span class="fu">c</span>(<span class="st">"AGEP"</span>,<span class="st">"GRPIP"</span>), <span class="at">cat_vars=</span><span class="fu">c</span>(<span class="st">"SEX"</span>,<span class="st">"HISPEED"</span>), <span class="at">geog=</span><span class="st">"State"</span>, <span class="at">geog_values=</span><span class="fu">c</span>(<span class="st">'12'</span>))</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="co">#summary stats on selected variables</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>summary_test_selected<span class="ot">&lt;-</span><span class="fu">summary</span>(data_tibble_test, <span class="at">cat_vars=</span><span class="fu">c</span>(<span class="st">"Sex"</span>, <span class="st">"Highspeed_Internet"</span>), <span class="at">numer_vars=</span><span class="fu">c</span>(<span class="st">"Age"</span>, <span class="st">"Rent_Percent_of_Income"</span>))</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>summary_test_selected</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>$numerical
 # A tibble: 2 × 3
@@ -590,12 +675,6 @@ $Language
 2 Rent_Percent_of_Income  12.5  23.4
 
 $categorical
-$categorical$State
-# A tibble: 1 × 2
-  State  count
-  &lt;chr&gt;  &lt;int&gt;
-1 12    202160
-
 $categorical$Sex
 # A tibble: 2 × 2
   Sex     count
@@ -611,127 +690,78 @@ $categorical$Highspeed_Internet
 2 No                  25085
 3 Yes                149911</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co">#summary stats on selected variables</span></span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>summary_test_selected<span class="ot">&lt;-</span><span class="fu">summary.census</span>(data_tibble_test,<span class="at">numer_vars=</span><span class="fu">c</span>(<span class="st">"Rent_Percent_of_Income"</span>))</span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>summary_test_selected</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>$numerical
-# A tibble: 1 × 3
-  variable                mean    sd
-  &lt;chr&gt;                  &lt;dbl&gt; &lt;dbl&gt;
-1 Rent_Percent_of_Income  12.5  23.4
-
-$categorical
-$categorical$State
-# A tibble: 1 × 2
-  State  count
-  &lt;chr&gt;  &lt;int&gt;
-1 12    202160
-
-$categorical$Sex
-# A tibble: 2 × 2
-  Sex     count
-  &lt;fct&gt;   &lt;int&gt;
-1 Female 103907
-2 Male    98253
-
-$categorical$Highspeed_Internet
-# A tibble: 3 × 2
-  Highspeed_Internet  count
-  &lt;fct&gt;               &lt;int&gt;
-1 N/A                 27164
-2 No                  25085
-3 Yes                149911</code></pre>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co">#box plot for Rent_Percent_of_Income and Sex variables</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(data_tibble_test, <span class="at">numer_var=</span><span class="st">"Rent_Percent_of_Income"</span>, <span class="at">cat_var=</span><span class="st">"Highspeed_Internet"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Project1_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
 </div>
 </div>
-<p>The second example, I am going to look use the <code>query_with_years</code> function to look at the same variables as above, but for Alaska, which is “ST=2”. You can find the different “ST” codes <a href="https://api.census.gov/data/2022/acs/acs1/pums/variables/ST.json">here</a>.</p>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co">#box plot for Rent_Percent_of_Income and Sex variables</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(data_tibble_test, <span class="at">numer_var=</span><span class="st">"Rent_Percent_of_Income"</span>, <span class="at">cat_var=</span><span class="st">"Sex"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Project1_files/figure-html/unnamed-chunk-10-2.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>From the boxplots above, it seems that females had a bit higher rent as a percent of their income than males, and that those with lower rent as a percent of their income were more likely to have highspeed internet compared to those with higher rent.</p>
+<p>The second example, I am going to use the <code>query_with_years</code> function to look at the same variables as above, but for Alaska, which is “ST=2”. You can find the different “ST” codes <a href="https://api.census.gov/data/2022/acs/acs1/pums/variables/ST.json">here</a>.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Using query_census_api to look at 2021, 2022  </span></span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>data_tibble_test_yr <span class="ot">&lt;-</span> <span class="fu">query_with_years</span>(<span class="at">years=</span><span class="fu">c</span>(<span class="dv">2021</span>,<span class="dv">2022</span>), <span class="at">numer_vars=</span><span class="fu">c</span>(<span class="st">"AGEP"</span>,<span class="st">"GRPIP"</span>), <span class="at">cat_vars=</span><span class="fu">c</span>(<span class="st">"SEX"</span>,<span class="st">"HISPEED"</span>), <span class="at">geog=</span><span class="st">"State"</span>, <span class="at">geog_values=</span><span class="fu">c</span>(<span class="st">'2'</span>))</span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>data_tibble_test_yr</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 13,383 × 7
-     Age Rent_Percent_of_Income PUMS_Weight State Sex   Highspeed_Internet  Year
-   &lt;dbl&gt;                  &lt;dbl&gt;       &lt;dbl&gt; &lt;chr&gt; &lt;fct&gt; &lt;fct&gt;              &lt;dbl&gt;
- 1    21                      0          38 02    Male  N/A                 2021
- 2    21                      0         151 02    Male  N/A                 2021
- 3    91                      0          69 02    Male  N/A                 2021
- 4    30                      0          16 02    Male  N/A                 2021
- 5    22                      0          75 02    Male  N/A                 2021
- 6    28                      0           8 02    Fema… N/A                 2021
- 7    27                      0           7 02    Male  N/A                 2021
- 8    22                      0          60 02    Male  N/A                 2021
- 9    31                      0          15 02    Male  N/A                 2021
-10    18                      0          16 02    Male  N/A                 2021
-# ℹ 13,373 more rows</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co">#summary stats on all variables</span></span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>summary_test_yr<span class="ot">&lt;-</span><span class="fu">summary.census</span>(data_tibble_test_yr)</span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>summary_test_yr</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Using query_with_years to fetch data </span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>data_tibble_test <span class="ot">&lt;-</span> <span class="fu">query_with_years</span>(<span class="at">years=</span><span class="fu">c</span>(<span class="dv">2018</span>), <span class="at">numer_vars=</span><span class="fu">c</span>(<span class="st">"AGEP"</span>,<span class="st">"GRPIP"</span>), <span class="at">cat_vars=</span><span class="fu">c</span>(<span class="st">"SEX"</span>,<span class="st">"HISPEED"</span>), <span class="at">geog=</span><span class="st">"State"</span>, <span class="at">geog_values=</span><span class="fu">c</span>(<span class="st">'2'</span>))</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="co">#summary stats on selected variables</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>summary_test_selected<span class="ot">&lt;-</span><span class="fu">summary</span>(data_tibble_test, <span class="at">cat_vars=</span><span class="fu">c</span>(<span class="st">"Sex"</span>, <span class="st">"Highspeed_Internet"</span>), <span class="at">numer_vars=</span><span class="fu">c</span>(<span class="st">"Age"</span>, <span class="st">"Rent_Percent_of_Income"</span>))</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>summary_test_selected</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>$numerical
-# A tibble: 3 × 3
-  variable                  mean     sd
-  &lt;chr&gt;                    &lt;dbl&gt;  &lt;dbl&gt;
-1 Age                      36.8  22.2  
-2 Rent_Percent_of_Income    8.81 20.0  
-3 Year                   2022.    0.500
-
-$categorical
-$categorical$State
-# A tibble: 1 × 2
-  State count
-  &lt;chr&gt; &lt;int&gt;
-1 02    13383
-
-$categorical$Sex
-# A tibble: 2 × 2
-  Sex    count
-  &lt;fct&gt;  &lt;int&gt;
-1 Female  6289
-2 Male    7094
-
-$categorical$Highspeed_Internet
-# A tibble: 3 × 2
-  Highspeed_Internet count
-  &lt;fct&gt;              &lt;int&gt;
-1 N/A                 2103
-2 No                  3407
-3 Yes                 7873</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co">#summary stats on selected variables</span></span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>summary_test_yr_selected<span class="ot">&lt;-</span><span class="fu">summary.census</span>(data_tibble_test_yr,<span class="at">numer_vars=</span><span class="fu">c</span>(<span class="st">"Rent_Percent_of_Income"</span>))</span>
-<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>summary_test_yr_selected</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>$numerical
-# A tibble: 1 × 3
+# A tibble: 2 × 3
   variable                mean    sd
   &lt;chr&gt;                  &lt;dbl&gt; &lt;dbl&gt;
-1 Rent_Percent_of_Income  8.81  20.0
+1 Age                    36.1   22.0
+2 Rent_Percent_of_Income  9.22  19.7
 
 $categorical
-$categorical$State
-# A tibble: 1 × 2
-  State count
-  &lt;chr&gt; &lt;int&gt;
-1 02    13383
-
 $categorical$Sex
 # A tibble: 2 × 2
   Sex    count
   &lt;fct&gt;  &lt;int&gt;
-1 Female  6289
-2 Male    7094
+1 Female  3204
+2 Male    3507
 
 $categorical$Highspeed_Internet
 # A tibble: 3 × 2
   Highspeed_Internet count
   &lt;fct&gt;              &lt;int&gt;
-1 N/A                 2103
-2 No                  3407
-3 Yes                 7873</code></pre>
+1 N/A                 1540
+2 No                  1380
+3 Yes                 3791</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co">#box plot for Rent_Percent_of_Income and Sex variables</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(data_tibble_test, <span class="at">numer_var=</span><span class="st">"Rent_Percent_of_Income"</span>, <span class="at">cat_var=</span><span class="st">"Highspeed_Internet"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Project1_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
 </div>
 </div>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co">#box plot for Rent_Percent_of_Income and Sex variables</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(data_tibble_test, <span class="at">numer_var=</span><span class="st">"Rent_Percent_of_Income"</span>, <span class="at">cat_var=</span><span class="st">"Sex"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Project1_files/figure-html/unnamed-chunk-11-2.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>This second example shows similar patterns in the data, but more drastic than the Florida example.</p>
 
 
 </section>

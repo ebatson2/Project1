@@ -4,7 +4,6 @@ author: Elizabeth Batson and Dane Korver
 date: Sunday, October 6, 2024
 format: html
 editor: visual
-API key: ef57316550be8b6492df7ca01b32a193c83ed8fc
 ---
 
 ```{r}
@@ -20,7 +19,7 @@ library(ggplot2)
 
 # Introduction
 
-Our goal for this project is to write functions that will manipulate and process data sets that come from the Public Use Microdata Sample (PUMS) Census API. This API gives pseudo person-level data. We'll create generic functions to automatically summarize and plot certain returned data.
+Our goal for this project is to write functions that will manipulate and process data sets that come from the Public Use Microdata Sample (PUMS) Census API. This API gives pseudo person-level data. We'll create generic functions to automatically summarize and plot the returned data.
 
 # Basic Example
 
@@ -34,7 +33,7 @@ census_info <- httr::GET(example_URL_census)
 
 # Data Processing
 
-To be able to write a customizable function to query the Census API, we wrote a couple helper functions one named `get_tibble` to take what is returned by GET() and turn it into a tibble and tested it with our `census_info` R object that we created earlier and saved the tibble as an R object named `census_tibble`. The second helper function named `format_num_and_cat_vars` to make numeric variable columns numeric, time column datetime, and categorical columns levels.
+To be able to write a customizable function to query the Census API, we wrote a couple of helper functions. `get_tibble()` takes what is returned by GET() and turns it into a tibble. We tested `get_tibble()` with our `census_info` R object that we created earlier and saved the tibble as a tibble named `census_tibble`. The second helper function named `format_num_and_cat_vars` makes numeric variable columns numeric, time columns period objects, and categorical columns factors.
 
 ```{r}
 get_tibble <- function(data_info){
@@ -50,8 +49,8 @@ get_tibble <- function(data_info){
 }
 
 #Testing our function
-#census_tibble <- get_tibble(census_info)
-#census_tibble
+census_tibble <- get_tibble(census_info)
+head(census_tibble)
 ```
 
 ```{r}
@@ -90,6 +89,7 @@ format_num_and_cat_vars <- function(data_tibble, numer_vars, cat_vars){
         time1 <- lubridate::hm(substring(val, 1, regexpr('to', val,)-2))
         time2 <- lubridate::hm(substring(val, regexpr('to', val,)+3))
         
+        # Only time differentials in the minute attribute are handled here
         diff <- time2-time1
         if(diff@hour>0 | second(diff)>0){stop("can't handle time diff")}
         
@@ -98,6 +98,7 @@ format_num_and_cat_vars <- function(data_tibble, numer_vars, cat_vars){
         
         time <- time1 + lubridate::hms(paste("0", min_offset, sec_offset, sep=", "))
         
+        # add '12' to the hour if the time is p.m.
         if(grepl('p.m.', val) & (time@hour!=12)){
           time <- time + lubridate::hms('12, 0, 0')
         }
@@ -106,6 +107,7 @@ format_num_and_cat_vars <- function(data_tibble, numer_vars, cat_vars){
       }
     }
     
+    # replace JWAP column with JWAP_time
     data_tibble <- data_tibble |>
       select(!c(JWAP)) |>
       rename(JWAP=JWAP_time)
@@ -144,6 +146,7 @@ format_num_and_cat_vars <- function(data_tibble, numer_vars, cat_vars){
         time1 <- lubridate::hm(substring(val, 1, regexpr('to', val,)-2))
         time2 <- lubridate::hm(substring(val, regexpr('to', val,)+3))
         
+        # Only time differentials in the minute attribute are handled here
         diff <- time2-time1
         if(diff@hour>0 | second(diff)>0){stop("can't handle time diff")}
         
@@ -152,6 +155,7 @@ format_num_and_cat_vars <- function(data_tibble, numer_vars, cat_vars){
         
         time <- time1 + lubridate::hms(paste("0", min_offset, sec_offset, sep=", "))
         
+        # add '12' to the hour if the time is p.m.
         if(grepl('p.m.', val) & (time@hour!=12)){
           time <- time + lubridate::hms('12, 0, 0')
         }
@@ -160,11 +164,13 @@ format_num_and_cat_vars <- function(data_tibble, numer_vars, cat_vars){
       }
     }
     
+    # replace JWDP column with JWDP_time
     data_tibble <- data_tibble |>
       select(!c(JWDP)) |>
       rename(JWDP=JWDP_time)
   }
   
+  ####################################################################################################
   # map the received values of categorical variables to their meaningful values and convert to factors
   if("FER" %in% cat_vars){
     data_tibble <- data_tibble |>
@@ -214,8 +220,9 @@ format_num_and_cat_vars <- function(data_tibble, numer_vars, cat_vars){
       mutate(Educational_Attainment=as.factor(Educational_Attainment)) |>
       select(!c("SCHL"))
 }
+  ####################################################################################################
   
-  # get rid of renamed columns, convert numeric vars to numeric type, categorical vars to factors
+  # convert numeric vars to numeric type, rename numeric columns to meaningful names
   data_tibble <- data_tibble |>
     mutate(across(numer_vars[numer_vars !="JWAP" & numer_vars!="JWDP"], as.numeric)) |>
     rename(any_of(c(Age="AGEP", Gas_Bill_Monthly="GASP", Rent_Percent_of_Income="GRPIP", Arrive_at_Work="JWAP", Depart_for_Work="JWDP", Work_Travel_Time="JWMNP", PUMS_Weight="PWGTP", State="state")))
@@ -246,10 +253,9 @@ The function named `query_census_api` has the following arguments: year, numer_v
 
 -   **geog**: this argument represents the geography level to be returned with 'State' as the default value. This input parameter has the following options for the user: All, Region, Division, and State
 
-```{r}
-#| message: FALSE
-#| echo: FALSE
+-   **geog**: this argument represents the value by which to subset the region. The default is '12', which is the value for Florida, the state our group was assigned.
 
+```{r}
 query_census_api <- function(year=2022, numer_vars=c("AGEP"), cat_vars=c("SEX"), geog="State", geog_values=c('12')){
   
   ######################INPUT VALIDATION######################
@@ -301,6 +307,7 @@ query_census_api <- function(year=2022, numer_vars=c("AGEP"), cat_vars=c("SEX"),
                       geog_query,
                       key_query)
   
+  # fetch the data using the new URL, get the data in a tibble, and clean the data using the format function
   data_info <- httr::GET(URL_census)
   data = get_tibble(data_info)
   clean_data = format_num_and_cat_vars(data, numer_vars, cat_vars)
@@ -308,17 +315,19 @@ query_census_api <- function(year=2022, numer_vars=c("AGEP"), cat_vars=c("SEX"),
 }
 
 #Testing our function
-#data_tibble_test <- query_census_api(year=2018, numer_vars=c("AGEP"), cat_vars=c("HISPEED"))
-#data_tibble_test
+data_tibble_test <- query_census_api(year=2018, numer_vars=c("AGEP"), cat_vars=c("HISPEED"))
+head(data_tibble_test)
 ```
 
-To allow the user to specify multiple years of survey data we wrote the R function `query_with_years`.
+To allow the user to specify multiple years of survey data, we wrote the R function `query_with_years`.
 
 ```{r}
 query_with_years <- function(years=c(2022), ...){
   
+  # initialize an empty tibble
   combined_tibble = tibble()
   
+  # loop through the years and add on each year's data
   for(i in seq_along(years)){
     year_tibble <- query_census_api(year=years[i], ...) |>
                       mutate(Year=years[i])
@@ -326,6 +335,7 @@ query_with_years <- function(years=c(2022), ...){
     combined_tibble <- bind_rows(combined_tibble, year_tibble)
   }
   
+  # add 'census' class to tibble
   class(combined_tibble) <- c("census", class(combined_tibble))
   
   return(combined_tibble)
@@ -339,7 +349,7 @@ head(data_tibble)
 
 ## Writing a Generic Function for Summarizing
 
-Now that we have our data, lets try to do something with it. We created a function named `summary.census` that takes in three arguments: the tibble data set, the numeric variables (the default will summarize all the numeric variables other than PWGTP) and any categorical variables that that you want to summarize.
+Now that we have our data, let's try to do something with it. We created a `summary()` function for the census class that takes in three arguments: the tibble data set, numeric variables to summarize, and categorical variables to summarize. If no numeric variables are specified, all will be summarized; similar for categorical variables.
 
 ```{r}
 
@@ -416,7 +426,9 @@ summary_test$numerical
 summary_test$categorical
 ```
 
-Finally, we created a basic graph function that takes in three arguments: the tibble data set, a numeric variables (the default variable is AGEP) and a categorical variable that you want to summarize (the default variable is SEX).
+# Creating a Generic Plotting Function
+
+Finally, we created a basic `plot()` function for the census class that takes in three arguments: the tibble data set, one numeric variable, and one categorical variable that you want to summarize. This function creates side-by-side box plots for the numerical variable, grouped by the categorical variable.
 
 ```{r}
 
@@ -430,7 +442,7 @@ plot.census <- function(data_tibble, numer_var=NULL, cat_var=NULL){
   graph <- ggplot(data_tibble,
     aes(x = get(cat_var), y = get(numer_var), weight = PUMS_Weight)) +
     geom_boxplot() +
-    labs(x=numer_var, y=cat_var)
+    labs(x=cat_var, y=numer_var)
 
   return(graph)
 
@@ -443,44 +455,55 @@ plot(data_tibble, numer_var="Age", cat_var="Recent_Birth")
 
 ## End example (Conclusion)
 
-We have created several functions (`get_tibble`,`format_num_and_cat_vars`,`query_census_api`,`query_with_years`,`summary.census`,`plot.census`) that will manipulate and process data sets that come from the Public Use Microdata Sample (PUMS) Census API. Lets show a couple simple example of using them. If we would like to look at only one year, we will use the `query_census_api` function and if we would like to look at multiple years we will use the `query_with_years` function. The first example will show how to use the `query_census_api` function to grab the 2018 Florida data which will be saved as an R object `data_tibble_test` and then I do basic means and standard deviations on all the variables, except for the weighting variable using the `summary.census` function and save that as a `summary_test` R object.
+We have created several functions (`get_tibble`,`format_num_and_cat_vars`,`query_census_api`,`query_with_years`,`summary`, and `plot`) that will manipulate and process data sets that come from the Public Use Microdata Sample (PUMS) Census API. Let's show a couple of simple examples of using them.
 
-The variables I am going to call are:
+In the first example, we show how to use the summary and plot functions to make interesting comparisons of rent for each sex, and highspeed internet by rent. 
 
--   "AGEP"=Age
+The variables we use are:
 
--   "GRPIP"=Gross rent as a percentage of household income past 12 months
+-   "AGEP"/"Age"=Age
 
--   "HISPEED"=Broadband (high speed) Internet service such as cable, fiber optic, or DSL service
+-   "GRPIP"/"Rent_Percent_of_Income"=Gross rent as a percentage of household income past 12 months
+
+-   "HISPEED"/"Highspeed_Internet"=Broadband (high speed) Internet service such as cable, fiber optic, or DSL service
+
+-   "SEX"/"Sex"=sex of respondant
 
 -   geog="State"
 
 -   geog_values="12"("Florida/FL")
 
 ```{r}
-#Using query_census_api to look at one year 
-data_tibble_test <- query_census_api(year=2018, numer_vars=c("AGEP","GRPIP"), cat_vars=c("SEX","HISPEED"), geog="State", geog_values=c('12'))
-#print tibble
-data_tibble_test
-#summary stats on all variables
-summary_test<-summary.census(data_tibble_test)
-summary_test
+#Using query_with_years to fetch data 
+data_tibble_test <- query_with_years(years=c(2018), numer_vars=c("AGEP","GRPIP"), cat_vars=c("SEX","HISPEED"), geog="State", geog_values=c('12'))
+
 #summary stats on selected variables
-summary_test_selected<-summary.census(data_tibble_test,numer_vars=c("Rent_Percent_of_Income"))
+summary_test_selected<-summary(data_tibble_test, cat_vars=c("Sex", "Highspeed_Internet"), numer_vars=c("Age", "Rent_Percent_of_Income"))
 summary_test_selected
-                                      
+
+#box plot for Rent_Percent_of_Income and Sex variables
+plot(data_tibble_test, numer_var="Rent_Percent_of_Income", cat_var="Highspeed_Internet")
+
+#box plot for Rent_Percent_of_Income and Sex variables
+plot(data_tibble_test, numer_var="Rent_Percent_of_Income", cat_var="Sex")
 ```
 
-The second example, I am going to look use the `query_with_years` function to look at the same variables as above, but for Alaska, which is "ST=2". You can find the different "ST" codes [here](https://api.census.gov/data/2022/acs/acs1/pums/variables/ST.json).
+From the boxplots above, it seems that females had a bit higher rent as a percent of their income than males, and that those with lower rent as a percent of their income were more likely to have highspeed internet compared to those with higher rent.
+
+The second example, I am going to use the `query_with_years` function to look at the same variables as above, but for Alaska, which is "ST=2". You can find the different "ST" codes [here](https://api.census.gov/data/2022/acs/acs1/pums/variables/ST.json).
 ```{r}
-#Using query_census_api to look at 2021, 2022  
-data_tibble_test_yr <- query_with_years(years=c(2021,2022), numer_vars=c("AGEP","GRPIP"), cat_vars=c("SEX","HISPEED"), geog="State", geog_values=c('2'))
-data_tibble_test_yr
-#summary stats on all variables
-summary_test_yr<-summary.census(data_tibble_test_yr)
-summary_test_yr
+#Using query_with_years to fetch data 
+data_tibble_test <- query_with_years(years=c(2018), numer_vars=c("AGEP","GRPIP"), cat_vars=c("SEX","HISPEED"), geog="State", geog_values=c('2'))
+
 #summary stats on selected variables
-summary_test_yr_selected<-summary.census(data_tibble_test_yr,numer_vars=c("Rent_Percent_of_Income"))
-summary_test_yr_selected
-                                      
+summary_test_selected<-summary(data_tibble_test, cat_vars=c("Sex", "Highspeed_Internet"), numer_vars=c("Age", "Rent_Percent_of_Income"))
+summary_test_selected
+
+#box plot for Rent_Percent_of_Income and Sex variables
+plot(data_tibble_test, numer_var="Rent_Percent_of_Income", cat_var="Highspeed_Internet")
+
+#box plot for Rent_Percent_of_Income and Sex variables
+plot(data_tibble_test, numer_var="Rent_Percent_of_Income", cat_var="Sex")
 ```
+
+This second example shows similar patterns in the data, but more drastic than the Florida example.
