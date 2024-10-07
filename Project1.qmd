@@ -304,7 +304,6 @@ query_census_api <- function(year=2022, numer_vars=c("AGEP"), cat_vars=c("SEX"),
   data_info <- httr::GET(URL_census)
   data = get_tibble(data_info)
   clean_data = format_num_and_cat_vars(data, numer_vars, cat_vars)
-  class(clean_data) <- c("census",class(clean_data))
   return(clean_data)
 }
 
@@ -327,11 +326,13 @@ query_with_years <- function(years=c(2022), ...){
     combined_tibble <- bind_rows(combined_tibble, year_tibble)
   }
   
+  class(combined_tibble) <- c("census", class(combined_tibble))
+  
   return(combined_tibble)
 }
 
 #Testing our function
-data_tibble <- query_with_years(years=c(2019, 2021), numer_vars=c("AGEP", "GASP"), cat_vars=c("FER", "HHL"))
+data_tibble <- query_with_years(years=c(2019), numer_vars=c("AGEP", "GASP"), cat_vars=c("FER", "HHL", "SEX"))
 head(data_tibble)
 
 ```
@@ -409,7 +410,7 @@ summary.census <- function(data_tibble, numer_vars=c("All"), cat_vars=c("All")){
 
 #test function 
 # summary_test<-summary.census(data_tibble,numer_vars=c("Age"),cat_vars=c("Sex"))
-summary_test<-summary.census(data_tibble)
+summary_test<-summary(data_tibble)
 
 summary_test$numerical
 summary_test$categorical
@@ -419,21 +420,30 @@ Finally, we created a basic graph function that takes in three arguments: the ti
 
 ```{r}
 
-graph.census <- function(data_tibble,num_var="AGEP",cat_var="SEX"){
+plot.census <- function(data_tibble, numer_var=NULL, cat_var=NULL){
 
-  #creating a basic boxplot
+  # input validation
+  if(is.null(numer_var) | is.null(cat_var)) {stop("Please specify 1 numerical and 1 categorical variable.")}
+  if(!(numer_var %in% names(data_tibble)) | !(cat_var %in% names(data_tibble))) {stop("Please specify variables that are in the tibble.")}
+  
+  # creating a basic boxplot
   graph <- ggplot(data_tibble,
-  aes(x = get(cat_var), y = get(num_var), weight = PUMS_Weight)) +
-  geom_boxplot()
+    aes(x = get(cat_var), y = get(numer_var), weight = PUMS_Weight)) +
+    geom_boxplot() +
+    labs(x=numer_var, y=cat_var)
+
   return(graph)
 
 }
+
+# test the plot function
+plot(data_tibble, numer_var="Age", cat_var="Recent_Birth")
 
 ```
 
 ## End example (Conclusion)
 
-We have created several functions (`get_tibble`,`format_num_and_cat_vars`,`query_census_api`,`query_with_years`,`summary.census`,`graph.census`) that will manipulate and process data sets that come from the Public Use Microdata Sample (PUMS) Census API. Lets show a couple simple example of using them. If we would like to look at only one year, we will use the `query_census_api` function and if we would like to look at multiple years we will use the `query_with_years` function. The first example will show how to use the `query_census_api` function to grab the 2018 Florida data which will be saved as an R object `data_tibble_test` and then I do basic means and standard deviations on all the variables, except for the weighting variable using the `summary.census` function and save that as a `summary_test` R object.
+We have created several functions (`get_tibble`,`format_num_and_cat_vars`,`query_census_api`,`query_with_years`,`summary.census`,`plot.census`) that will manipulate and process data sets that come from the Public Use Microdata Sample (PUMS) Census API. Lets show a couple simple example of using them. If we would like to look at only one year, we will use the `query_census_api` function and if we would like to look at multiple years we will use the `query_with_years` function. The first example will show how to use the `query_census_api` function to grab the 2018 Florida data which will be saved as an R object `data_tibble_test` and then I do basic means and standard deviations on all the variables, except for the weighting variable using the `summary.census` function and save that as a `summary_test` R object.
 
 The variables I am going to call are:
 
@@ -456,7 +466,6 @@ data_tibble_test
 summary_test<-summary.census(data_tibble_test)
 summary_test
 #summary stats on selected variables
-# summary_test_selected<-summary.census(data_tibble_test,numer_vars=c("GRPIP"))
 summary_test_selected<-summary.census(data_tibble_test,numer_vars=c("Rent_Percent_of_Income"))
 summary_test_selected
                                       
@@ -471,7 +480,6 @@ data_tibble_test_yr
 summary_test_yr<-summary.census(data_tibble_test_yr)
 summary_test_yr
 #summary stats on selected variables
-# summary_test_yr_selected<-summary.census(data_tibble_test_yr,numer_vars=c("GRPIP"))
 summary_test_yr_selected<-summary.census(data_tibble_test_yr,numer_vars=c("Rent_Percent_of_Income"))
 summary_test_yr_selected
                                       
