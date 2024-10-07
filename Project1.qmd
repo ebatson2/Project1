@@ -253,7 +253,7 @@ The function named `query_census_api` has the following arguments: year, numer_v
 
 -   **geog**: this argument represents the geography level to be returned with 'State' as the default value. This input parameter has the following options for the user: All, Region, Division, and State
 
--   **geog**: this argument represents the value by which to subset the region. The default is '12', which is the value for Florida, the state our group was assigned.
+-   **geog_values**: this argument represents the value by which to subset the region. The default is '12', which is the value for Florida, the state our group was assigned.
 
 ```{r}
 query_census_api <- function(year=2022, numer_vars=c("AGEP"), cat_vars=c("SEX"), geog="State", geog_values=c('12')){
