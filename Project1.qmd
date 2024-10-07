@@ -218,7 +218,7 @@ format_num_and_cat_vars <- function(data_tibble, numer_vars, cat_vars){
   # get rid of renamed columns, convert numeric vars to numeric type, categorical vars to factors
   data_tibble <- data_tibble |>
     mutate(across(numer_vars[numer_vars !="JWAP" & numer_vars!="JWDP"], as.numeric)) |>
-    rename(any_of(c(Age="AGEP", Gas_Bill_Monthly="GASP", Rent_Percent_of_Income="GRPIP", Arrive_at_Work="JWAP", Depart_for_Work="JWDP", Work_Travel_Time="JWMNP", Weight="PWGTP", State="state")))
+    rename(any_of(c(Age="AGEP", Gas_Bill_Monthly="GASP", Rent_Percent_of_Income="GRPIP", Arrive_at_Work="JWAP", Depart_for_Work="JWDP", Work_Travel_Time="JWMNP", PUMS_Weight="PWGTP", State="state")))
   
   return(data_tibble)
 }
@@ -304,14 +304,11 @@ query_census_api <- function(year=2022, numer_vars=c("AGEP"), cat_vars=c("SEX"),
   data_info <- httr::GET(URL_census)
   data = get_tibble(data_info)
   clean_data = format_num_and_cat_vars(data, numer_vars, cat_vars)
-  #class(clean_data) <- c("census",class(clean_data))
+  class(clean_data) <- c("census",class(clean_data))
   return(clean_data)
 }
 
 #Testing our function
-#data_tibble_test <- query_census_api(year=2021, numer_vars=c("AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP", "PWGTP"))
-#data_tibble_test <- query_census_api(year=2021, numer_vars=c("AGEP"), cat_vars=c("HISPEED"), geog="State", geog_values=c("06", "24"))
-#data_tibble_test <- query_census_api(year=2021, numer_vars=c("AGEP"), cat_vars=c("HISPEED"), geog="State")
 #data_tibble_test <- query_census_api(year=2018, numer_vars=c("AGEP"), cat_vars=c("HISPEED"))
 #data_tibble_test
 ```
@@ -334,11 +331,7 @@ query_with_years <- function(years=c(2022), ...){
 }
 
 #Testing our function
-# data_tibble <- query_with_years(numer_vars=c("JWAP", "GASP"))
-# data_tibble <- query_with_years(numer_vars=c("JWDP", "JWAP", "GASP"))
-# data_tibble <- query_with_years(years=c(2019), cat_vars=all_cat_vars)
-# data_tibble <- query_with_years(years=c(2019), numer_vars=all_numer_vars, cat_vars=all_cat_vars)
-data_tibble <- query_with_years(years=c(2019))
+data_tibble <- query_with_years(years=c(2019, 2021), numer_vars=c("AGEP", "GASP"), cat_vars=c("FER", "HHL"))
 head(data_tibble)
 
 ```
@@ -349,58 +342,77 @@ Now that we have our data, lets try to do something with it. We created a functi
 
 ```{r}
 
-summary.census <- function(data_tibble,numer_vars="All",cat_vars="All"){
+summary.census <- function(data_tibble, numer_vars=c("All"), cat_vars=c("All")){
 
-  class(data_tibble) <- c("census",class(data_tibble))
-  summary_tibble = tibble()
-  #if user specifies variables to summarize
-  if (numer_vars != "All" | cat_vars != "All") {    
-    for(i in seq_along(numer_vars)){
-      numer_col <- data_tibble[[numer_vars[i]]]
-      # weight_col <- data_tibble$PWGTP
-      weight_col <- data_tibble$Weight
-      var_col<-paste(numer_vars[i])
-      
-      #Find mean and sd of numeric variables
-      #mean
-      sample_mean<-sum(numer_col*weight_col)/sum(weight_col)
-      #sd
-      sample_sd<-sqrt(sum(numer_col**2*weight_col)/sum(weight_col)-sample_mean**2)
-  
-      summary_tibble <- bind_rows(summary_tibble,tibble(variable=var_col,mean=sample_mean,sd=sample_sd))    
-    }
-    #if user doesn't specify variables to summarize
-  } else {
+  #if user doesn't specify numerical variables to summarize
+  if("All" %in% numer_vars) {
+    
+    numer_vars <- c()
+
     for(i in seq_along(names(data_tibble))){
-      # if (names(data_tibble)[i] != "PWGTP") {
-      if (names(data_tibble)[i] != "Weight") {
-        if (!is.numeric(data_tibble[[i]])) {
-          numer_col <- as.numeric(data_tibble[[i]])
-        }
-        else {
-          numer_col <- data_tibble[[i]] 
-        }
-        # weight_col <- data_tibble$PWGTP
-        weight_col <- data_tibble$Weight
-        var_col<-names(data_tibble)[i]
-        
-        #Find mean and sd of numeric variables
-        #mean
-        sample_mean<-sum(numer_col*weight_col)/sum(weight_col)
-        #sd
-        sample_sd<-sqrt(sum(numer_col**2*weight_col)/sum(weight_col)-sample_mean**2)
-        
-        summary_tibble <- bind_rows(summary_tibble,tibble(variable=var_col,mean=sample_mean,sd=sample_sd))    
+      if (is.numeric(data_tibble[[i]]) & names(data_tibble)[i] != "PUMS_Weight") {
+          numer_vars <- c(numer_vars, names(data_tibble)[i])
       }
     }
   }
-  return(summary_tibble)
+  
+  #if user doesn't specify categorical variables to summarize
+  if("All" %in% cat_vars){
+    
+    cat_vars <- c()
+    
+    for(i in seq_along(names(data_tibble))){
+      if (!is.numeric(data_tibble[[i]])) {
+          cat_vars <- c(cat_vars, names(data_tibble)[i])
+      }
+    }
+  }
 
+  # start a blank tibble for the numerical variable summary
+  numer_summary = tibble()
+  
+  # grab the weight data for numerical calculations
+  weight_col <- data_tibble$PUMS_Weight
+  
+  # numerical var calculations
+  for (numer_var in numer_vars){
+    
+    #Find mean and sd of numeric variables
+    sample_mean <- sum(data_tibble[, numer_var]*weight_col)/sum(weight_col)
+    sample_sd <- sqrt(sum(data_tibble[, numer_var]**2*weight_col)/sum(weight_col)-sample_mean**2)
+
+    # add line to summary tibble
+    numer_summary <- bind_rows(numer_summary, tibble(variable=numer_var, mean=sample_mean, sd=sample_sd))
+    
+  }
+
+  # start a blank list for the categorical variable summary
+  cat_summary = list()
+  
+  # get counts for each cat var
+  for (cat_var in cat_vars){
+    
+    var_count <- data_tibble |>
+      count(data_tibble[!!cat_var]) |>
+      rename(count=n)
+    
+    # add tibble to summary list
+    cat_summary <- c(cat_summary, list(var_count))
+  }
+  
+  # label the categorical variable count summaries
+  names(cat_summary) <- cat_vars
+  
+  # return all summaries
+  return(list(numerical=numer_summary, categorical=cat_summary))
 }
-#test function 
-#summary_test<-summary.census(data_tibble_test,numer_vars=c("AGEP"),cat_vars=c("FER","SEX","HISPEED"))
-#summary_test<-summary.census(data_tibble_test)
 
+#test function 
+# summary_test<-summary.census(data_tibble,numer_vars=c("Age"),cat_vars=c("Sex"))
+summary_test<-summary.census(data_tibble)
+
+summary_test$numerical
+summary_test$categorical
 ```
 
 Finally, we created a basic graph function that takes in three arguments: the tibble data set, a numeric variables (the default variable is AGEP) and a categorical variable that you want to summarize (the default variable is SEX).
@@ -411,8 +423,7 @@ graph.census <- function(data_tibble,num_var="AGEP",cat_var="SEX"){
 
   #creating a basic boxplot
   graph <- ggplot(data_tibble,
-  # aes(x = get(cat_var), y = get(num_var), weight = PWGTP)) +
-  aes(x = get(cat_var), y = get(num_var), weight = Weight)) +
+  aes(x = get(cat_var), y = get(num_var), weight = PUMS_Weight)) +
   geom_boxplot()
   return(graph)
 
@@ -445,7 +456,8 @@ data_tibble_test
 summary_test<-summary.census(data_tibble_test)
 summary_test
 #summary stats on selected variables
-summary_test_selected<-summary.census(data_tibble_test,numer_vars=c("GRPIP"))
+# summary_test_selected<-summary.census(data_tibble_test,numer_vars=c("GRPIP"))
+summary_test_selected<-summary.census(data_tibble_test,numer_vars=c("Rent_Percent_of_Income"))
 summary_test_selected
                                       
 ```
@@ -459,7 +471,8 @@ data_tibble_test_yr
 summary_test_yr<-summary.census(data_tibble_test_yr)
 summary_test_yr
 #summary stats on selected variables
-summary_test_yr_selected<-summary.census(data_tibble_test_yr,numer_vars=c("GRPIP"))
+# summary_test_yr_selected<-summary.census(data_tibble_test_yr,numer_vars=c("GRPIP"))
+summary_test_yr_selected<-summary.census(data_tibble_test_yr,numer_vars=c("Rent_Percent_of_Income"))
 summary_test_yr_selected
                                       
 ```
